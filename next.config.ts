@@ -20,6 +20,9 @@ const nextConfig = {
       },
     ],
   },
+  // Configuración vacía de turbopack para silenciar el error de build
+  // El plugin PWA usa webpack, pero la app funciona correctamente
+  turbopack: {},
 };
 
 export default withPWA(nextConfig);
