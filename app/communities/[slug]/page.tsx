@@ -1,11 +1,13 @@
 "use client";
 
 import { use, useEffect, useState, useRef } from "react";
-import { MapPin, Users, ArrowLeft, Plus, Loader2, ChevronUp, ChevronDown, MessageCircle, MoreVertical, Edit, Trash, Shield, LogOut } from "lucide-react";
+import { MapPin, Users, ArrowLeft, Plus, Loader2, ChevronUp, ChevronDown, MessageCircle, MoreVertical, Edit, Trash, Shield } from "lucide-react";
 import Link from "next/link";
-import { useUser, SignOutButton } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
+import GlobalHeader from "@/components/GlobalHeader";
 import MembersPanel from "./components/MembersPanel";
 import RoleManagementPanel from "./components/RoleManagementPanel";
+import EnhancedCommentInput from "./components/EnhancedCommentInput";
 
 type Community = {
     id: string;
@@ -160,33 +162,10 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-            {/* Header */}
-            <header className="bg-gray-900/50 backdrop-blur-lg border-b border-white/10 sticky top-0 z-50">
-                <div className="container mx-auto px-4 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <Link href="/communities" className="text-gray-400 hover:text-white">
-                                <ArrowLeft className="w-6 h-6" />
-                            </Link>
-                            <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
-                                <MapPin className="w-6 h-6 text-white" />
-                            </div>
-                            <span className="text-xl font-bold text-white">NearHype</span>
-                        </div>
-                        {/* Logout Button */}
-                        {user && (
-                            <SignOutButton>
-                                <button className="flex items-center gap-2 px-4 py-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition">
-                                    <LogOut className="w-5 h-5" />
-                                    <span className="hidden sm:inline">Cerrar sesión</span>
-                                </button>
-                            </SignOutButton>
-                        )}
-                    </div>
-                </div>
-            </header>
+            {/* Global Header */}
+            <GlobalHeader />
 
-            {/* Community Header */}
+            {/* Community Hero */}
             <div className="bg-white/5 border-b border-white/10">
                 <div className="container mx-auto px-4 py-8">
                     <div className="flex items-start justify-between flex-wrap gap-4">
@@ -294,21 +273,12 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
                                 Chat
                             </button>
                         )}
-                        <button
-                            onClick={() => setActiveTab('members')}
-                            className={`py-4 px-2 font-semibold border-b-2 transition ${activeTab === 'members'
-                                ? 'border-indigo-500 text-white'
-                                : 'border-transparent text-gray-400 hover:text-white'
-                                }`}
-                        >
-                            Miembros
-                        </button>
                     </div>
                 </div>
             </div>
 
-            {/* Tab Content */}
-            <div className={`container mx-auto px-4 py-8 max-w-4xl transition-all duration-300 ${!isMembersPanelCollapsed ? 'mr-80' : ''}`}>
+            {/* Tab Content - LAYOUT FIJO, no se mueve cuando se abre el panel */}
+            <div className="container mx-auto px-4 py-8 max-w-4xl">
                 {activeTab === 'posts' && (
                     <>
                         {posts.length === 0 ? (
@@ -333,18 +303,6 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
 
                 {activeTab === 'chat' && isMember && (
                     <CommunityChat communitySlug={slug} />
-                )}
-
-                {activeTab === 'members' && (
-                    <div className="text-center py-20 bg-white/5 rounded-xl">
-                        <Users className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                        <h3 className="text-xl font-bold text-gray-300 mb-2">
-                            Lista de miembros
-                        </h3>
-                        <p className="text-gray-500">
-                            Usa el panel lateral para ver los miembros →
-                        </p>
-                    </div>
                 )}
             </div>
 
@@ -595,10 +553,14 @@ function PostCard({ post, communitySlug, userRole }: { post: Post; communitySlug
                             <Loader2 className="w-6 h-6 text-indigo-500 animate-spin mx-auto" />
                         </div>
                     ) : (
-                        <>
+                        <div className="space-y-4">
                             <CommentsList comments={comments} postId={post.id} />
-                            <AddCommentForm postId={post.id} onCommentAdded={handleCommentAdded} />
-                        </>
+                            <EnhancedCommentInput
+                                postId={post.id}
+                                onCommentAdded={handleCommentAdded}
+                                placeholder="Escribe un comentario..."
+                            />
+                        </div>
                     )}
                 </div>
             )}

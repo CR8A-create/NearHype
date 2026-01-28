@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { TrendingUp, Heart, MapPin, Loader2 } from "lucide-react";
 import Link from "next/link";
+import GlobalHeader from "@/components/GlobalHeader";
 
 type Post = {
     id: string;
@@ -45,43 +46,8 @@ export default function DiscoverPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-            {/* Header */}
-            <header className="bg-gray-900/50 backdrop-blur-lg border-b border-white/10 sticky top-0 z-50">
-                <div className="container mx-auto px-4 py-4">
-                    <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
-                            <MapPin className="w-6 h-6 text-white" />
-                        </div>
-                        <span className="text-xl font-bold text-white">NearHype</span>
-                    </div>
-                </div>
-            </header>
-
-            {/* Navigation Tabs */}
-            <div className="bg-white/5 border-b border-white/10">
-                <div className="container mx-auto px-4">
-                    <div className="flex gap-8">
-                        <Link
-                            href="/feed"
-                            className="py-4 px-2 font-semibold border-b-2 border-transparent text-gray-400 hover:text-white transition"
-                        >
-                            Tu Feed
-                        </Link>
-                        <Link
-                            href="/discover"
-                            className="py-4 px-2 font-semibold border-b-2 border-indigo-500 text-white"
-                        >
-                            Descubrir
-                        </Link>
-                        <Link
-                            href="/communities"
-                            className="py-4 px-2 font-semibold border-b-2 border-transparent text-gray-400 hover:text-white transition"
-                        >
-                            Comunidades
-                        </Link>
-                    </div>
-                </div>
-            </div>
+            {/* Global Header */}
+            <GlobalHeader />
 
             {/* Main Content */}
             <div className="container mx-auto px-4 py-8 max-w-4xl">

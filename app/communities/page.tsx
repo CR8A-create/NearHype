@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { MapPin, Users, ExternalLink, Search, Plus, Loader2 } from "lucide-react";
 import Link from "next/link";
+import GlobalHeader from "@/components/GlobalHeader";
 
 type Community = {
     id: string;
@@ -51,34 +52,8 @@ export default function CommunitiesPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-            {/* Header */}
-            <header className="bg-gray-900/50 backdrop-blur-lg border-b border-white/10 sticky top-0 z-50">
-                <div className="container mx-auto px-4 py-4">
-                    <div className="flex justify-between items-center">
-                        <Link href="/feed" className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
-                                <MapPin className="w-6 h-6 text-white" />
-                            </div>
-                            <span className="text-xl font-bold text-white">NearHype</span>
-                        </Link>
-
-                        <div className="flex items-center gap-4">
-                            <Link
-                                href="/settings"
-                                className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition hidden md:block"
-                            >
-                                Configuración
-                            </Link>
-                            <Link
-                                href="/feed"
-                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-                            >
-                                Feed
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            </header>
+            {/* Global Header */}
+            <GlobalHeader />
 
             <div className="container mx-auto px-4 py-8">
                 {/* Hero */}
@@ -120,8 +95,8 @@ export default function CommunitiesPage() {
                             key={cat}
                             onClick={() => setSelectedCategory(cat)}
                             className={`px-4 py-2 rounded-full capitalize whitespace-nowrap transition ${selectedCategory === cat
-                                    ? 'bg-indigo-600 text-white'
-                                    : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-white/5 text-gray-300 hover:bg-white/10'
                                 }`}
                         >
                             {cat === "all" ? "Todas" : cat}

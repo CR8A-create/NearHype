@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { MapPin, Sparkles, RefreshCw, Filter, TrendingUp, Calendar, Users, ExternalLink } from "lucide-react";
 import Link from "next/link";
+import GlobalHeader from "@/components/GlobalHeader";
 
 type ContentItem = {
     id: string;
@@ -117,49 +118,8 @@ export default function FeedPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-            {/* Header */}
-            <header className="bg-gray-900/50 backdrop-blur-lg border-b border-white/10 sticky top-0 z-50">
-                <div className="container mx-auto px-4 py-4">
-                    <div className="flex justify-between items-center">
-                        <Link href="/" className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
-                                <MapPin className="w-6 h-6 text-white" />
-                            </div>
-                            <span className="text-xl font-bold text-white">NearHype</span>
-                        </Link>
-
-                        <div className="flex items-center gap-4">
-                            <Link
-                                href="/communities"
-                                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition hidden md:flex items-center gap-2"
-                            >
-                                <Users className="w-4 h-4" />
-                                Comunidades
-                            </Link>
-
-                            <button
-                                onClick={refreshFeed}
-                                disabled={isRefreshing}
-                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-2 disabled:opacity-50"
-                            >
-                                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                                <span className="hidden md:inline">{isRefreshing ? 'Actualizando...' : 'Refrescar'}</span>
-                            </button>
-
-                            <Link
-                                href="/settings"
-                                className="w-10 h-10 rounded-full overflow-hidden border-2 border-indigo-500"
-                            >
-                                <img
-                                    src={user?.imageUrl}
-                                    alt={user?.firstName || "Usuario"}
-                                    className="w-full h-full object-cover"
-                                />
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            </header>
+            {/* Global Header */}
+            <GlobalHeader />
 
             <div className="container mx-auto px-4 py-8">
                 {/* Info del feed */}

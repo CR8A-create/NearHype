@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { communities, communityMembers } from "@/lib/db/schema";
+import { communities, communityMembers, users } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 
 /**
@@ -44,14 +44,25 @@ export async function POST(
             return NextResponse.json({ error: "Comunidad no encontrada" }, { status: 404 });
         }
 
-        // Obtener membresía del usuario actual
+        // ARREGLO: Buscar el usuario actual en la BD usando clerkId
+        const [currentDbUser] = await db
+            .select()
+            .from(users)
+            .where(eq(users.clerkId, user.id))
+            .limit(1);
+
+        if (!currentDbUser) {
+            return NextResponse.json({ error: "Usuario no encontrado en la base de datos" }, { status: 404 });
+        }
+
+        // Obtener membresía del usuario actual (ahora usando el ID correcto de la BD)
         const [currentUserMember] = await db
             .select()
             .from(communityMembers)
             .where(
                 and(
                     eq(communityMembers.communityId, community.id),
-                    eq(communityMembers.userId, user.id)
+                    eq(communityMembers.userId, currentDbUser.id)
                 )
             )
             .limit(1);
