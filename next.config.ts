@@ -18,11 +18,16 @@ const nextConfig = {
         protocol: 'https' as const,
         hostname: 'images.clerk.dev',
       },
+      {
+        protocol: 'https' as const,
+        hostname: 'utfs.io',
+      },
     ],
   },
   // Configuración vacía de turbopack para silenciar el error de build
   // El plugin PWA usa webpack, pero la app funciona correctamente
   turbopack: {},
+  serverExternalPackages: ['uploadthing'],
 };
 
 export default withPWA(nextConfig);
