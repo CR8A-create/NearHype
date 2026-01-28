@@ -267,7 +267,14 @@ function MessageItem({
         );
     }
 
-    const canDelete = currentUsername === message.author.username; // TODO: agregar lógica de mod/admin
+    // Debug logs
+    console.log('Message author:', message.author.username);
+    console.log('Current user:', currentUsername);
+    console.log('Can delete?:', currentUsername === message.author.username);
+
+    // Por ahora, mostrar botón siempre para debug
+    const canDelete = true; // Temporalmente true para testing
+    // const canDelete = currentUsername === message.author.username;
 
     return (
         <div
