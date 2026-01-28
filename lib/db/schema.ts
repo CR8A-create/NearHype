@@ -214,6 +214,9 @@ export const postComments = pgTable("post_comments", {
     upvotes: real("upvotes").default(0),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
+    // Soft delete para moderación
+    deletedAt: timestamp("deleted_at"),
+    deletedBy: uuid("deleted_by").references(() => users.id, { onDelete: "set null" }),
 }, (table) => ({
     postIdx: index("idx_comments_post").on(table.postId),
     userIdx: index("idx_comments_user").on(table.userId),
@@ -231,6 +234,9 @@ export const communityMessages = pgTable("community_messages", {
     mediaUrl: text("media_url"), // URLs de fotos/GIFs
     linkUrl: text("link_url"), // Links
     createdAt: timestamp("created_at").defaultNow(),
+    // Soft delete para moderación
+    deletedAt: timestamp("deleted_at"),
+    deletedBy: uuid("deleted_by").references(() => users.id, { onDelete: "set null" }),
 }, (table) => ({
     communityIdx: index("idx_messages_community").on(table.communityId),
     createdIdx: index("idx_messages_created").on(table.createdAt),

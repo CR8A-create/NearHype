@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { MessageCircle, X, Image as ImageIcon } from "lucide-react";
+import { MessageCircle, X, Image as ImageIcon, Trash2, MoreVertical } from "lucide-react";
+import { useUser } from "@clerk/nextjs";
 import ImageUpload from "@/components/ImageUpload";
 
 export type Message = {
@@ -10,6 +11,8 @@ export type Message = {
     mediaUrl?: string | null;
     linkUrl?: string | null;
     createdAt: string;
+    userId?: string;
+    deletedAt?: string | null;
     author: { username: string; avatarUrl?: string };
     replyTo?: {
         id: string;
@@ -19,6 +22,7 @@ export type Message = {
 };
 
 export default function CommunityChat({ communitySlug }: { communitySlug: string }) {
+    const { user } = useUser();
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
@@ -113,6 +117,19 @@ export default function CommunityChat({ communitySlug }: { communitySlug: string
                             key={msg.id}
                             message={msg}
                             onReply={() => setReplyingTo(msg)}
+                            onDelete={async (id) => {
+                                try {
+                                    const res = await fetch(`/api/communities/${communitySlug}/messages/${id}`, {
+                                        method: 'DELETE',
+                                    });
+                                    if (res.ok) {
+                                        await loadMessages();
+                                    }
+                                } catch (error) {
+                                    console.error('Error deleting message:', error);
+                                }
+                            }}
+                            currentUsername={user?.username}
                         />
                     ))
                 )}
@@ -211,23 +228,52 @@ export default function CommunityChat({ communitySlug }: { communitySlug: string
 // Componente MessageItem con soporte para replies e imágenes
 function MessageItem({
     message,
-    onReply
+    onReply,
+    onDelete,
+    currentUsername
 }: {
     message: Message;
     onReply: () => void;
+    onDelete: (id: string) => Promise<void>;
+    currentUsername?: string;
 }) {
-    const [showReplyButton, setShowReplyButton] = useState(false);
+    const [showActions, setShowActions] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const formatTime = (timestamp: string) => {
         const date = new Date(timestamp);
         return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
     };
 
+    // Si el mensaje está eliminado
+    if (message.deletedAt) {
+        return (
+            <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center text-gray-500">
+                    <Trash2 className="w-5 h-5" />
+                </div>
+                <div className="flex-1">
+                    <div className="flex items-baseline gap-2 mb-1">
+                        <span className="font-semibold text-gray-500">
+                            {message.author.username}
+                        </span>
+                        <span className="text-xs text-gray-600">
+                            {formatTime(message.createdAt!)}
+                        </span>
+                    </div>
+                    <p className="text-gray-500 italic">[mensaje eliminado]</p>
+                </div>
+            </div>
+        );
+    }
+
+    const canDelete = currentUsername === message.author.username; // TODO: agregar lógica de mod/admin
+
     return (
         <div
-            className="flex items-start gap-3 group"
-            onMouseEnter={() => setShowReplyButton(true)}
-            onMouseLeave={() => setShowReplyButton(false)}
+            className="flex items-start gap-3 group relative"
+            onMouseEnter={() => setShowActions(true)}
+            onMouseLeave={() => setShowActions(false)}
         >
             {message.author.avatarUrl ? (
                 <img
@@ -260,15 +306,50 @@ function MessageItem({
                     <span className="text-xs text-gray-500">
                         {formatTime(message.createdAt!)}
                     </span>
-                    {showReplyButton && (
-                        <button
-                            onClick={onReply}
-                            className="text-xs text-indigo-400 hover:text-indigo-300 transition"
-                        >
-                            Responder
-                        </button>
+                    {showActions && (
+                        <>
+                            <button
+                                onClick={onReply}
+                                className="text-xs text-indigo-400 hover:text-indigo-300 transition"
+                            >
+                                Responder
+                            </button>
+                            {canDelete && (
+                                <button
+                                    onClick={() => setShowDeleteConfirm(true)}
+                                    className="text-xs text-red-400 hover:text-red-300 transition flex items-center gap-1"
+                                >
+                                    <Trash2 className="w-3 h-3" />
+                                    Eliminar
+                                </button>
+                            )}
+                        </>
                     )}
                 </div>
+
+                {/* Confirmación de eliminación */}
+                {showDeleteConfirm && (
+                    <div className="absolute top-0 right-0 bg-gray-800 border border-red-500 rounded-lg p-3 shadow-xl z-10">
+                        <p className="text-sm text-white mb-2">¿Eliminar mensaje?</p>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={async () => {
+                                    await onDelete(message.id);
+                                    setShowDeleteConfirm(false);
+                                }}
+                                className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition"
+                            >
+                                Eliminar
+                            </button>
+                            <button
+                                onClick={() => setShowDeleteConfirm(false)}
+                                className="px-3 py-1 bg-gray-600 text-white text-xs rounded hover:bg-gray-700 transition"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Image */}
                 {message.mediaUrl && (

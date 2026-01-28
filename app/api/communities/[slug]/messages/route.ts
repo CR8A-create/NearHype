@@ -34,6 +34,8 @@ export async function GET(req: NextRequest, { params }: Params) {
                 linkUrl: communityMessages.linkUrl,
                 replyToId: communityMessages.replyToId,
                 createdAt: communityMessages.createdAt,
+                deletedAt: communityMessages.deletedAt,
+                userId: communityMessages.userId, // Para verificar permisos en frontend
                 author: {
                     username: users.username,
                     avatarUrl: users.avatarUrl,
