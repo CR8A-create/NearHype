@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Image, Link2, Smile, Loader2, X } from "lucide-react";
+import ImageUpload from "@/components/ImageUpload";
 
 type EnhancedCommentInputProps = {
     postId: string;
@@ -16,7 +17,7 @@ export default function EnhancedCommentInput({ postId, parentCommentId, onCommen
     const [content, setContent] = useState('');
     const [mediaUrl, setMediaUrl] = useState('');
     const [linkUrl, setLinkUrl] = useState('');
-    const [showMediaInput, setShowMediaInput] = useState(false);
+    const [showImageUpload, setShowImageUpload] = useState(false);
     const [showLinkInput, setShowLinkInput] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,7 +54,7 @@ export default function EnhancedCommentInput({ postId, parentCommentId, onCommen
                 setContent('');
                 setMediaUrl('');
                 setLinkUrl('');
-                setShowMediaInput(false);
+                setShowImageUpload(false);
                 setShowLinkInput(false);
             } else {
                 setError(data.error || 'Error al publicar comentario');
@@ -85,25 +86,40 @@ export default function EnhancedCommentInput({ postId, parentCommentId, onCommen
                 />
             </div>
 
-            {/* Media URL Input */}
-            {showMediaInput && (
-                <div className="flex gap-2">
-                    <input
-                        type="url"
-                        value={mediaUrl}
-                        onChange={(e) => setMediaUrl(e.target.value)}
-                        placeholder="URL de imagen o GIF"
-                        className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            {/* Image Upload */}
+            {showImageUpload && (
+                <div className="relative">
+                    <ImageUpload
+                        endpoint="messageImage"
+                        onUploadComplete={(url) => {
+                            setMediaUrl(url);
+                            setShowImageUpload(false);
+                        }}
+                        onUploadError={(err) => setError(err)}
                     />
                     <button
                         type="button"
                         onClick={() => {
-                            setShowMediaInput(false);
+                            setShowImageUpload(false);
                             setMediaUrl('');
                         }}
-                        className="p-2 text-gray-400 hover:text-white transition"
+                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition"
                     >
-                        <X className="w-5 h-5" />
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+            )}
+
+            {/* Show uploaded image preview */}
+            {mediaUrl && !showImageUpload && (
+                <div className="relative">
+                    <img src={mediaUrl} alt="Uploaded" className="max-h-40 rounded-lg" />
+                    <button
+                        type="button"
+                        onClick={() => setMediaUrl('')}
+                        className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition"
+                    >
+                        <X className="w-4 h-4" />
                     </button>
                 </div>
             )}
@@ -138,11 +154,11 @@ export default function EnhancedCommentInput({ postId, parentCommentId, onCommen
                     <button
                         type="button"
                         onClick={() => {
-                            setShowMediaInput(!showMediaInput);
+                            setShowImageUpload(!showImageUpload);
                             setShowLinkInput(false);
                         }}
-                        className={`p-2 rounded-lg transition ${showMediaInput ? 'bg-indigo-500/20 text-indigo-400' : 'text-gray-400 hover:bg-white/10 hover:text-white'}`}
-                        title="Agregar imagen/GIF"
+                        className={`p-2 rounded-lg transition ${showImageUpload || mediaUrl ? 'bg-indigo-500/20 text-indigo-400' : 'text-gray-400 hover:bg-white/10 hover:text-white'}`}
+                        title="Subir imagen"
                     >
                         <Image className="w-5 h-5" />
                     </button>
@@ -152,7 +168,7 @@ export default function EnhancedCommentInput({ postId, parentCommentId, onCommen
                         type="button"
                         onClick={() => {
                             setShowLinkInput(!showLinkInput);
-                            setShowMediaInput(false);
+                            setShowImageUpload(false);
                         }}
                         className={`p-2 rounded-lg transition ${showLinkInput ? 'bg-indigo-500/20 text-indigo-400' : 'text-gray-400 hover:bg-white/10 hover:text-white'}`}
                         title="Agregar enlace"

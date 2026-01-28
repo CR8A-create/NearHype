@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
-import { TrendingUp, Heart, MapPin, Loader2 } from "lucide-react";
+import { TrendingUp, Heart, MapPin, Loader2, Users, MessageCircle, ChevronUp } from "lucide-react";
 import Link from "next/link";
 import GlobalHeader from "@/components/GlobalHeader";
 

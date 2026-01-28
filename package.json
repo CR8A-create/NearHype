@@ -17,6 +17,7 @@
     "@clerk/nextjs": "^6.36.8",
     "@ducanh2912/next-pwa": "^10.2.9",
     "@google/generative-ai": "^0.24.1",
+    "@uploadthing/react": "^7.3.3",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",
@@ -25,6 +26,7 @@
     "postgres": "^3.4.8",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "uploadthing": "^7.7.4",
     "workbox-window": "^7.4.0",
     "zod": "^4.3.5",
     "zustand": "^5.0.10"
