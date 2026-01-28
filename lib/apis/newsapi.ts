@@ -1,92 +1,54 @@
-/**
- * NewsAPI Client
- * Free tier: 100 requests/day, good for development
- * For production: consider upgrading or using GDELT as primary
- */
+// lib/apis/newsapi.ts - NewsAPI.org (100 requests/día gratis para siempre)
 
-export interface NewsAPIArticle {
+const NEWS_API_KEY = process.env.NEWSAPI_KEY || '';
+const ENABLE_NEWSAPI = process.env.ENABLE_NEWSAPI === 'true';
+
+interface NewsAPIArticle {
+    source: { name: string };
+    author: string | null;
     title: string;
-    description: string;
+    description: string | null;
     url: string;
-    urlToImage?: string;
+    urlToImage: string | null;
     publishedAt: string;
-    source: {
-        name: string;
-    };
-    content?: string;
+    content: string | null;
 }
 
-export async function fetchNewsAPI(
-    keywords: string[],
-    language: string = "es",
-    pageSize: number = 10
-): Promise<NewsAPIArticle[]> {
-    // Note: NewsAPI requires an API key
-    // For MVP, we'll use GDELT as primary. NewsAPI is optional enhancement.
-    const apiKey = process.env.NEWSAPI_KEY;
-
-    if (!apiKey) {
-        console.warn('NewsAPI key not configured, skipping NewsAPI source');
+export async function fetchNewsAPI(query: string, language: string = 'es', pageSize: number = 20): Promise<any[]> {
+    if (!ENABLE_NEWSAPI || !NEWS_API_KEY) {
+        console.log('NewsAPI disabled or no API key');
         return [];
     }
 
     try {
-        const query = keywords.join(" OR ");
-        const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&language=${language}&pageSize=${pageSize}&sortBy=publishedAt&apiKey=${apiKey}`;
+        const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&language=${language}&pageSize=${pageSize}&sortBy=publishedAt&apiKey=${NEWS_API_KEY}`;
 
-        const response = await fetch(url);
-
-        if (!response.ok) {
-            console.error('NewsAPI error:', response.status);
+        const res = await fetch(url);
+        if (!res.ok) {
+            console.error('NewsAPI error:', res.status);
             return [];
         }
 
-        const data = await response.json();
+        const data = await res.json();
 
-        if (data.status !== 'ok' || !data.articles) {
-            return [];
-        }
-
-        return data.articles;
+        return (data.articles || []).map((article: NewsAPIArticle) => ({
+            title: article.title,
+            description: article.description || '',
+            url: article.url,
+            source: article.source.name,
+            publishedAt: article.publishedAt,
+            socialimage: article.urlToImage,
+        }));
     } catch (error) {
         console.error('Error fetching NewsAPI:', error);
         return [];
     }
 }
 
-/**
- * Get Spanish/European news sources for better localization
- */
-export async function fetchLocalNews(
-    keywords: string[],
-    country: string = "es", // ISO code
-    pageSize: number = 10
-): Promise<NewsAPIArticle[]> {
-    const apiKey = process.env.NEWSAPI_KEY;
+// Buscar noticias locales (eventos, noticias de una ciudad)
+export async function fetchLocalNews(city: string, interests: string[], limit: number = 10): Promise<any[]> {
+    if (!ENABLE_NEWSAPI) return [];
 
-    if (!apiKey) {
-        return [];
-    }
-
-    try {
-        const query = keywords.join(" OR ");
-        const url = `https://newsapi.org/v2/top-headlines?q=${encodeURIComponent(query)}&country=${country}&pageSize=${pageSize}&apiKey=${apiKey}`;
-
-        const response = await fetch(url);
-
-        if (!response.ok) {
-            return [];
-        }
-
-        const data = await response.json();
-
-        if (data.status !== 'ok' || !data.articles) {
-            return [];
-        }
-
-        return data.articles;
-    } catch (error) {
-        console.error('Error fetching local news:', error);
-        return [];
-    }
+    const query = `${city} (${interests.slice(0, 3).join(' OR ')})`;
+    return await fetchNewsAPI(query, 'es', limit);
 }
