@@ -80,17 +80,17 @@ export const userSettings = pgTable("user_settings", {
 export const feedCache = pgTable("feed_cache", {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
-    contentItems: jsonb("content_items").$type<Array<{
+    feedData: jsonb("feed_data").$type<{
         id: string;
+        type: string;
         title: string;
         description: string;
-        url: string;
-        source: string;
-        publishedAt: string;
-        location?: { city: string; distance: number };
-        relevanceScore: number;
+        imageUrl?: string;
+        author: string;
+        timestamp: string;
+        tags: string[];
         category: string;
-    }>>().notNull(),
+    }[]>().notNull(),
     cacheKey: varchar("cache_key", { length: 255 }).unique().notNull(),
     generatedAt: timestamp("generated_at").defaultNow(),
     expiresAt: timestamp("expires_at").notNull(),
@@ -99,6 +99,33 @@ export const feedCache = pgTable("feed_cache", {
     userIdx: index("idx_feed_cache_user").on(table.userId),
     cacheKeyIdx: uniqueIndex("idx_feed_cache_key").on(table.cacheKey),
     expiresIdx: index("idx_feed_cache_expires").on(table.expiresAt),
+}));
+
+// ====== FRIEND SYSTEM TABLES ======
+
+// Solicitudes de amistad
+export const friendRequests = pgTable("friend_requests", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    senderId: uuid("sender_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    receiverId: uuid("receiver_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    status: varchar("status", { length: 20 }).default("pending").notNull(), // 'pending', 'accepted', 'rejected'
+    createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+    senderReceiverIdx: uniqueIndex("idx_friend_requests_sender_receiver").on(table.senderId, table.receiverId),
+    receiverStatusIdx: index("idx_friend_requests_receiver_status").on(table.receiverId, table.status),
+    senderIdx: index("idx_friend_requests_sender").on(table.senderId),
+}));
+
+// Amistades establecidas
+export const friendships = pgTable("friendships", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId1: uuid("user_id_1").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    userId2: uuid("user_id_2").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+    user1User2Idx: uniqueIndex("idx_friendships_users").on(table.userId1, table.userId2),
+    user1Idx: index("idx_friendships_user1").on(table.userId1),
+    user2Idx: index("idx_friendships_user2").on(table.userId2),
 }));
 
 // ====== NOTIFICATIONS SYSTEM ======
@@ -427,3 +454,11 @@ export type NewCommentVote = typeof commentVotes.$inferInsert;
 // Notification types
 export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
+
+// Friend system types
+export type FriendRequest = typeof friendRequests.$inferSelect;
+export type NewFriendRequest = typeof friendRequests.$inferInsert;
+
+export type Friendship = typeof friendships.$inferSelect;
+export type NewFriendship = typeof friendships.$inferInsert;
+
