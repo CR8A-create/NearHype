@@ -90,6 +90,13 @@ export async function DELETE(req: NextRequest, { params }: Params) {
             })
             .where(eq(postComments.id, commentId));
 
+        // Decrementar contador de comentarios en el post
+        const { sql } = await import('drizzle-orm');
+        await db
+            .update(communityPosts)
+            .set({ commentCount: sql`GREATEST(${communityPosts.commentCount} - 1, 0)` })
+            .where(eq(communityPosts.id, postId));
+
         return NextResponse.json({
             success: true,
             message: "Comentario eliminado correctamente",
