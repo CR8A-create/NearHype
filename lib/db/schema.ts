@@ -13,6 +13,13 @@ export const users = pgTable("users", {
     email: varchar("email", { length: 255 }).unique().notNull(),
     username: varchar("username", { length: 50 }).unique().notNull(),
     avatarUrl: text("avatar_url"),
+    // Campos de perfil público
+    bio: text("bio"),
+    bannerUrl: varchar("banner_url", { length: 500 }),
+    publicInterests: jsonb("public_interests").$type<string[]>(),
+    profileVisibility: varchar("profile_visibility", { length: 20 }).default("public"),
+    showLocation: boolean("show_location").default(true),
+    // Metadata y preferencias
     preferredLanguage: varchar("preferred_language", { length: 10 }).default("es"),
     createdAt: timestamp("created_at").defaultNow(),
     lastLogin: timestamp("last_login"),

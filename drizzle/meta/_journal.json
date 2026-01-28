@@ -15,6 +15,13 @@
       "when": 1769643661477,
       "tag": "0001_steep_vision",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1769643983917,
+      "tag": "0002_hesitant_wildside",
+      "breakpoints": true
     }
   ]
 }
