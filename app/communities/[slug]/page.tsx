@@ -1,9 +1,11 @@
 "use client";
 
 import { use, useEffect, useState, useRef } from "react";
-import { MapPin, Users, ArrowLeft, Plus, Loader2, ChevronUp, ChevronDown, MessageCircle, MoreVertical, Edit, Trash } from "lucide-react";
+import { MapPin, Users, ArrowLeft, Plus, Loader2, ChevronUp, ChevronDown, MessageCircle, MoreVertical, Edit, Trash, Shield, LogOut } from "lucide-react";
 import Link from "next/link";
-import { useUser } from "@clerk/nextjs";
+import { useUser, SignOutButton } from "@clerk/nextjs";
+import MembersPanel from "./components/MembersPanel";
+import RoleManagementPanel from "./components/RoleManagementPanel";
 
 type Community = {
     id: string;
@@ -48,6 +50,8 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
     const [showEditModal, setShowEditModal] = useState(false);
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const [activeTab, setActiveTab] = useState<'posts' | 'chat' | 'members'>('posts');
+    const [isMembersPanelCollapsed, setIsMembersPanelCollapsed] = useState(false);
+    const [showRoleManagement, setShowRoleManagement] = useState(false);
 
     useEffect(() => {
         loadCommunity();
@@ -159,14 +163,25 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
             {/* Header */}
             <header className="bg-gray-900/50 backdrop-blur-lg border-b border-white/10 sticky top-0 z-50">
                 <div className="container mx-auto px-4 py-4">
-                    <div className="flex items-center gap-4">
-                        <Link href="/communities" className="text-gray-400 hover:text-white">
-                            <ArrowLeft className="w-6 h-6" />
-                        </Link>
-                        <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
-                            <MapPin className="w-6 h-6 text-white" />
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <Link href="/communities" className="text-gray-400 hover:text-white">
+                                <ArrowLeft className="w-6 h-6" />
+                            </Link>
+                            <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
+                                <MapPin className="w-6 h-6 text-white" />
+                            </div>
+                            <span className="text-xl font-bold text-white">NearHype</span>
                         </div>
-                        <span className="text-xl font-bold text-white">NearHype</span>
+                        {/* Logout Button */}
+                        {user && (
+                            <SignOutButton>
+                                <button className="flex items-center gap-2 px-4 py-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition">
+                                    <LogOut className="w-5 h-5" />
+                                    <span className="hidden sm:inline">Cerrar sesión</span>
+                                </button>
+                            </SignOutButton>
+                        )}
                     </div>
                 </div>
             </header>
@@ -197,6 +212,17 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
                         </div>
 
                         <div className="flex gap-3">
+                            {/* Botón Gestión de Roles - Para owner y admin */}
+                            {isMember && (userRole === 'owner' || userRole === 'admin') && (
+                                <button
+                                    onClick={() => setShowRoleManagement(true)}
+                                    className="px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition flex items-center gap-2"
+                                >
+                                    <Shield className="w-5 h-5" />
+                                    Gestionar Roles
+                                </button>
+                            )}
+
                             {/* Botón Crear Post - Para miembros Y owners */}
                             {isMember && (
                                 <button
@@ -282,7 +308,7 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
             </div>
 
             {/* Tab Content */}
-            <div className="container mx-auto px-4 py-8 max-w-4xl">
+            <div className={`container mx-auto px-4 py-8 max-w-4xl transition-all duration-300 ${!isMembersPanelCollapsed ? 'mr-80' : ''}`}>
                 {activeTab === 'posts' && (
                     <>
                         {posts.length === 0 ? (
@@ -316,11 +342,20 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
                             Lista de miembros
                         </h3>
                         <p className="text-gray-500">
-                            Próximamente...
+                            Usa el panel lateral para ver los miembros →
                         </p>
                     </div>
                 )}
             </div>
+
+            {/* Members Panel (Lateral Derecho) */}
+            {isMember && (
+                <MembersPanel
+                    communitySlug={slug}
+                    isCollapsed={isMembersPanelCollapsed}
+                    onToggle={() => setIsMembersPanelCollapsed(!isMembersPanelCollapsed)}
+                />
+            )}
 
             {/* Create Post Modal */}
             {showCreateModal && (
@@ -363,6 +398,15 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
                     community={community!}
                     onClose={() => setShowEditModal(false)}
                     onSaved={loadCommunity}
+                />
+            )}
+
+            {/* Role Management Modal */}
+            {showRoleManagement && (
+                <RoleManagementPanel
+                    communitySlug={slug}
+                    currentUserRole={userRole || 'member'}
+                    onClose={() => setShowRoleManagement(false)}
                 />
             )}
 

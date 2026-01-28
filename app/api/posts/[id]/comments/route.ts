@@ -87,7 +87,7 @@ export async function POST(req: NextRequest, { params }: Params) {
         }
 
         const body = await req.json();
-        const { content, parentCommentId } = body;
+        const { content, parentCommentId, mediaUrl, linkUrl } = body;
 
         if (!content || content.trim().length < 1) {
             return NextResponse.json(
@@ -138,6 +138,8 @@ export async function POST(req: NextRequest, { params }: Params) {
             userId: user.id,
             content,
             parentCommentId: parentCommentId || null,
+            mediaUrl: mediaUrl || null,
+            linkUrl: linkUrl || null,
         }).returning();
 
         // Incrementar contador de comentarios en el post

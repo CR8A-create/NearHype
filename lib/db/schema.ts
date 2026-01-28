@@ -176,6 +176,14 @@ export const postComments = pgTable("post_comments", {
     userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
     content: text("content").notNull(),
     parentCommentId: uuid("parent_comment_id").references((): any => postComments.id, { onDelete: "cascade" }),
+    // Nuevos campos para multimedia
+    mediaUrl: text("media_url"), // URLs de fotos/GIFs
+    linkUrl: text("link_url"), // Links con preview
+    linkMetadata: jsonb("link_metadata").$type<{
+        title?: string;
+        description?: string;
+        image?: string;
+    }>(),
     upvotes: real("upvotes").default(0),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
@@ -191,10 +199,26 @@ export const communityMessages = pgTable("community_messages", {
     communityId: uuid("community_id").references(() => communities.id, { onDelete: "cascade" }).notNull(),
     userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
     content: text("content").notNull(),
+    // Nuevos campos para respuestas y multimedia
+    replyToId: uuid("reply_to_id").references((): any => communityMessages.id, { onDelete: "set null" }),
+    mediaUrl: text("media_url"), // URLs de fotos/GIFs
+    linkUrl: text("link_url"), // Links
     createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
     communityIdx: index("idx_messages_community").on(table.communityId),
     createdIdx: index("idx_messages_created").on(table.createdAt),
+    replyIdx: index("idx_messages_reply").on(table.replyToId),
+}));
+
+// Votos en comentarios (nueva tabla)
+export const commentVotes = pgTable("comment_votes", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    commentId: uuid("comment_id").references(() => postComments.id, { onDelete: "cascade" }).notNull(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    voteType: varchar("vote_type", { length: 10 }).notNull(), // upvote, downvote
+    createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+    commentUserIdx: uniqueIndex("idx_comment_votes_unique").on(table.commentId, table.userId),
 }));
 
 // ====== RELATIONS (para queries con joins) ======
@@ -264,6 +288,10 @@ export const communityMessagesRelations = relations(communityMessages, ({ one })
         fields: [communityMessages.userId],
         references: [users.id],
     }),
+    replyTo: one(communityMessages, {
+        fields: [communityMessages.replyToId],
+        references: [communityMessages.id],
+    }),
 }));
 
 export const communityPostsRelations = relations(communityPosts, ({ one, many }) => ({
@@ -304,6 +332,18 @@ export const postCommentsRelations = relations(postComments, ({ one, many }) => 
         references: [postComments.id],
     }),
     replies: many(postComments),
+    votes: many(commentVotes),
+}));
+
+export const commentVotesRelations = relations(commentVotes, ({ one }) => ({
+    comment: one(postComments, {
+        fields: [commentVotes.commentId],
+        references: [postComments.id],
+    }),
+    user: one(users, {
+        fields: [commentVotes.userId],
+        references: [users.id],
+    }),
 }));
 
 // ======TYPES (para usar en el código) ======
@@ -340,3 +380,6 @@ export type NewPostComment = typeof postComments.$inferInsert;
 
 export type CommunityMessage = typeof communityMessages.$inferSelect;
 export type NewCommunityMessage = typeof communityMessages.$inferInsert;
+
+export type CommentVote = typeof commentVotes.$inferSelect;
+export type NewCommentVote = typeof commentVotes.$inferInsert;
