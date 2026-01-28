@@ -11,10 +11,6 @@ export const ourFileRouter = {
             const user = await currentUser();
             if (!user) throw new Error("No autenticado");
             return { userId: user.id };
-        })
-        .onUploadComplete(async ({ file }) => {
-            // Solo devolvemos la URL, sin complejidad
-            return { url: file.url };
         }),
 
     // Uploader de imágenes para comentarios y chat
@@ -23,9 +19,6 @@ export const ourFileRouter = {
             const user = await currentUser();
             if (!user) throw new Error("No autenticado");
             return { userId: user.id };
-        })
-        .onUploadComplete(async ({ file }) => {
-            return { url: file.url };
         }),
 
     // Uploader para avatares de comunidades
@@ -34,9 +27,6 @@ export const ourFileRouter = {
             const user = await currentUser();
             if (!user) throw new Error("No autenticado");
             return { userId: user.id };
-        })
-        .onUploadComplete(async ({ file }) => {
-            return { url: file.url };
         }),
 } satisfies FileRouter;
 
