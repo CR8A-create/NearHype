@@ -48,9 +48,6 @@ export async function GET(req: NextRequest) {
                 id: true,
                 username: true,
                 avatarUrl: true,
-                firstName: true,
-                lastName: true,
-                bio: true,
             },
         });
 
