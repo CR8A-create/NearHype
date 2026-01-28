@@ -25,11 +25,14 @@ export async function GET(req: NextRequest, { params }: Params) {
             );
         }
 
-        // Obtener últimos 50 mensajes con info del autor
-        const messages = await db
+        // Obtener últimos 50 mensajes con info del autor y replyTo
+        const messagesResult = await db
             .select({
                 id: communityMessages.id,
                 content: communityMessages.content,
+                mediaUrl: communityMessages.mediaUrl,
+                linkUrl: communityMessages.linkUrl,
+                replyToId: communityMessages.replyToId,
                 createdAt: communityMessages.createdAt,
                 author: {
                     username: users.username,
@@ -41,6 +44,40 @@ export async function GET(req: NextRequest, { params }: Params) {
             .where(eq(communityMessages.communityId, community.id))
             .orderBy(desc(communityMessages.createdAt))
             .limit(50);
+
+        // Obtener datos de los mensajes a los que responden (si existen)
+        const messageIds = messagesResult.map(m => m.id);
+        const replyToIds = messagesResult
+            .map(m => m.replyToId)
+            .filter((id): id is string => id !== null);
+
+        const replyToMessages = replyToIds.length > 0
+            ? await db
+                .select({
+                    id: communityMessages.id,
+                    content: communityMessages.content,
+                    authorUsername: users.username,
+                })
+                .from(communityMessages)
+                .leftJoin(users, eq(communityMessages.userId, users.id))
+                .where(eq(communityMessages.communityId, community.id))
+            : [];
+
+        const replyToMap = new Map(replyToMessages.map(m => [m.id, m]));
+
+        // Construir mensajes con replyTo populated
+        const messages = messagesResult.map(msg => ({
+            ...msg,
+            replyTo: msg.replyToId && replyToMap.has(msg.replyToId)
+                ? {
+                    id: replyToMap.get(msg.replyToId)!.id,
+                    content: replyToMap.get(msg.replyToId)!.content,
+                    author: {
+                        username: replyToMap.get(msg.replyToId)!.authorUsername,
+                    },
+                }
+                : null,
+        }));
 
         // Revertir orden para mostrar más antiguos primero
         return NextResponse.json({
@@ -103,7 +140,7 @@ export async function POST(req: NextRequest, { params }: Params) {
         }
 
         const body = await req.json();
-        const { content } = body;
+        const { content, replyToId, imageUrl } = body;
 
         if (!content || !content.trim() || content.length > 1000) {
             return NextResponse.json(
@@ -112,6 +149,11 @@ export async function POST(req: NextRequest, { params }: Params) {
             );
         }
 
+        // Extraer primer URL del contenido (si existe)
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const urls = content.match(urlRegex);
+        const linkUrl = urls ? urls[0] : null;
+
         // Crear mensaje
         const [newMessage] = await db
             .insert(communityMessages)
@@ -119,14 +161,45 @@ export async function POST(req: NextRequest, { params }: Params) {
                 communityId: community.id,
                 userId: user.id,
                 content: content.trim(),
+                replyToId: replyToId || null,
+                mediaUrl: imageUrl || null,
+                linkUrl: linkUrl,
             })
             .returning();
+
+        // Si hay replyTo, obtener datos del mensaje original
+        let replyToData = null;
+        if (newMessage.replyToId) {
+            const replyToMsg = await db
+                .select({
+                    id: communityMessages.id,
+                    content: communityMessages.content,
+                    authorUsername: users.username,
+                })
+                .from(communityMessages)
+                .leftJoin(users, eq(communityMessages.userId, users.id))
+                .where(eq(communityMessages.id, newMessage.replyToId))
+                .limit(1);
+
+            if (replyToMsg.length > 0) {
+                replyToData = {
+                    id: replyToMsg[0].id,
+                    content: replyToMsg[0].content,
+                    author: {
+                        username: replyToMsg[0].authorUsername,
+                    },
+                };
+            }
+        }
 
         return NextResponse.json({
             success: true,
             message: {
                 id: newMessage.id,
                 content: newMessage.content,
+                mediaUrl: newMessage.mediaUrl,
+                linkUrl: newMessage.linkUrl,
+                replyTo: replyToData,
                 createdAt: newMessage.createdAt,
                 author: {
                     username: user.username,
