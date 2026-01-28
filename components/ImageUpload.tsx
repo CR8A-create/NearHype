@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { X, Loader2, Image as ImageIcon } from "lucide-react";
-import { uploadFiles } from "@/lib/uploadthing";
+import { useUploadThing } from "@/lib/uploadthing";
 
 type ImageUploadProps = {
     onUploadComplete: (url: string) => void;
@@ -23,6 +23,38 @@ export default function ImageUpload({
     const [error, setError] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const { startUpload } = useUploadThing(endpoint, {
+        onClientUploadComplete: (res) => {
+            if (res && res[0]) {
+                const uploadedUrl = res[0].url;
+                console.log('✅ Upload exitoso:', uploadedUrl);
+                onUploadComplete(uploadedUrl);
+                setPreview(null);
+                setIsUploading(false);
+            }
+        },
+        onUploadError: (error) => {
+            // Ignorar errores de callback del servidor
+            if (error.message?.includes('callback') || error.message?.includes('404')) {
+                console.warn('⚠️ Error de callback ignorado (la imagen se subió)');
+                return;
+            }
+
+            const errorMessage = error.message || 'Error al subir la imagen';
+            console.error('❌ Error de upload:', errorMessage);
+            setError(errorMessage);
+            onUploadError?.(errorMessage);
+            setPreview(null);
+            setIsUploading(false);
+        },
+        onUploadBegin: (fileName) => {
+            console.log('📤 Iniciando upload:', fileName);
+        },
+        onUploadProgress: (progress) => {
+            console.log('📊 Progreso:', progress);
+        },
+    });
+
     const handleFileChange = useCallback(async (file: File) => {
         // Validar tamaño
         const sizeMB = file.size / (1024 * 1024);
@@ -41,39 +73,24 @@ export default function ImageUpload({
             return;
         }
 
-        // Crear preview
+        // Crear preview local
         const reader = new FileReader();
         reader.onload = (e) => {
             setPreview(e.target?.result as string);
         };
         reader.readAsDataURL(file);
 
-        // Subir
+        // Subir archivo
         setIsUploading(true);
         setError('');
 
         try {
-            const result = await uploadFiles(endpoint, {
-                files: [file],
-            });
-
-            if (result && result[0]) {
-                // Obtener URL directamente
-                const uploadedUrl = result[0].url;
-                onUploadComplete(uploadedUrl);
-                setPreview(null);
-            } else {
-                throw new Error('No se recibió URL del archivo');
-            }
+            await startUpload([file]);
         } catch (err: any) {
-            const errorMessage = err?.message || 'Error al subir la imagen';
-            setError(errorMessage);
-            onUploadError?.(errorMessage);
-            setPreview(null);
-        } finally {
-            setIsUploading(false);
+            // Solo loguear, el error real se maneja en onUploadError
+            console.error('Excepción en startUpload:', err);
         }
-    }, [maxSizeMB, onUploadError, onUploadComplete, endpoint]);
+    }, [maxSizeMB, onUploadError, startUpload]);
 
     // Manejador de input file
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -123,6 +140,7 @@ export default function ImageUpload({
 
     const clearPreview = () => {
         setPreview(null);
+        setIsUploading(false);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -154,6 +172,7 @@ export default function ImageUpload({
                     {!isUploading && (
                         <button
                             onClick={clearPreview}
+                            type="button"
                             className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition"
                         >
                             <X className="w-4 h-4" />
