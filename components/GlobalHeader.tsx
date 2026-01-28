@@ -1,18 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin, Sparkles, Home, RefreshCcw, ArrowLeft, Settings } from "lucide-react";
+import { MapPin, Sparkles, Home, RefreshCcw, ArrowLeft, Settings, UserPlus } from "lucide-react";
 import { UserButton, useUser } from "@clerk/nextjs";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import SettingsModal from "./SettingsModal";
 import NotificationBell from "./NotificationBell";
+import FriendRequestsModal from "./FriendRequestsModal";
+import FriendsList from "./FriendsList";
 
 export default function GlobalHeader() {
     const pathname = usePathname();
     const router = useRouter();
     const { user } = useUser();
     const [showSettings, setShowSettings] = useState(false);
+    const [showFriendRequests, setShowFriendRequests] = useState(false);
+    const [showFriendsList, setShowFriendsList] = useState(true);
 
     const isActive = (path: string) => {
         if (path === '/feed' && (pathname === '/feed' || pathname === '/')) return true;
@@ -114,6 +118,16 @@ export default function GlobalHeader() {
                                 <span className="hidden sm:inline">Config</span>
                             </button>
 
+                            {/* Solicitudes de amistad */}
+                            <button
+                                onClick={() => setShowFriendRequests(true)}
+                                className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition relative"
+                                title="Solicitudes de amistad"
+                            >
+                                <UserPlus className="w-5 h-5" />
+                                <span className="hidden sm:inline">Amigos</span>
+                            </button>
+
                             {/* Notificaciones */}
                             <NotificationBell />
 
@@ -137,6 +151,16 @@ export default function GlobalHeader() {
 
             {/* Modal de Configuración */}
             {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+
+            {/* Modal de solicitudes de amistad */}
+            {showFriendRequests && (
+                <FriendRequestsModal
+                    onClose={() => setShowFriendRequests(false)}
+                />
+            )}
+
+            {/* Sidebar de amigos */}
+            {showFriendsList && <FriendsList />}
         </>
     );
 }
