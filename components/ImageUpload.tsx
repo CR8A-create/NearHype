@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Upload, X, Loader2, Image as ImageIcon } from "lucide-react";
-import { useUploadThing } from "@/lib/uploadthing";
+import { X, Loader2, Image as ImageIcon } from "lucide-react";
+import { uploadFiles } from "@/lib/uploadthing";
 
 type ImageUploadProps = {
     onUploadComplete: (url: string) => void;
@@ -20,35 +20,24 @@ export default function ImageUpload({
     const [preview, setPreview] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
+    const [error, setError] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const { startUpload } = useUploadThing(endpoint, {
-        onClientUploadComplete: (res) => {
-            if (res && res[0]) {
-                onUploadComplete(res[0].url);
-                setPreview(null);
-                setIsUploading(false);
-            }
-        },
-        onUploadError: (error) => {
-            console.error("Error al subir:", error);
-            onUploadError?.(error.message || "Error al subir la imagen");
-            setIsUploading(false);
-            setPreview(null);
-        },
-    });
 
     const handleFileChange = useCallback(async (file: File) => {
         // Validar tamaño
         const sizeMB = file.size / (1024 * 1024);
         if (sizeMB > maxSizeMB) {
-            onUploadError?.(`La imagen es demasiado grande (${sizeMB.toFixed(1)}MB). Máximo: ${maxSizeMB}MB`);
+            const errMsg = `La imagen es demasiado grande (${sizeMB.toFixed(1)}MB). Máximo: ${maxSizeMB}MB`;
+            setError(errMsg);
+            onUploadError?.(errMsg);
             return;
         }
 
         // Validar tipo
         if (!file.type.startsWith('image/')) {
-            onUploadError?.("Solo se permiten imágenes");
+            const errMsg = "Solo se permiten imágenes";
+            setError(errMsg);
+            onUploadError?.(errMsg);
             return;
         }
 
@@ -61,8 +50,30 @@ export default function ImageUpload({
 
         // Subir
         setIsUploading(true);
-        await startUpload([file]);
-    }, [maxSizeMB, onUploadError, startUpload]);
+        setError('');
+
+        try {
+            const result = await uploadFiles(endpoint, {
+                files: [file],
+            });
+
+            if (result && result[0]) {
+                // Obtener URL directamente
+                const uploadedUrl = result[0].url;
+                onUploadComplete(uploadedUrl);
+                setPreview(null);
+            } else {
+                throw new Error('No se recibió URL del archivo');
+            }
+        } catch (err: any) {
+            const errorMessage = err?.message || 'Error al subir la imagen';
+            setError(errorMessage);
+            onUploadError?.(errorMessage);
+            setPreview(null);
+        } finally {
+            setIsUploading(false);
+        }
+    }, [maxSizeMB, onUploadError, onUploadComplete, endpoint]);
 
     // Manejador de input file
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -125,6 +136,13 @@ export default function ImageUpload({
             onDrop={handleDrop}
             className="relative"
         >
+            {/* Mensaje de error */}
+            {error && (
+                <div className="mb-2 p-2 bg-red-500/20 border border-red-500/50 rounded-lg text-red-300 text-sm">
+                    {error}
+                </div>
+            )}
+
             {/* Preview de la imagen */}
             {preview && (
                 <div className="relative mb-3 p-2 bg-white/5 rounded-lg border border-white/20">
