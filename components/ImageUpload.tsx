@@ -85,12 +85,40 @@ export default function ImageUpload({
         setError('');
 
         try {
-            await startUpload([file]);
+            // startUpload devuelve la URL inmediatamente, sin esperar callbacks
+            const result = await startUpload([file]);
+
+            if (result && result[0] && result[0].url) {
+                const uploadedUrl = result[0].url;
+                console.log('✅ Upload exitoso:', uploadedUrl);
+
+                // Llamar al callback con la URL
+                onUploadComplete(uploadedUrl);
+
+                // Limpiar preview
+                setPreview(null);
+                setIsUploading(false);
+            } else {
+                throw new Error('No se recibió URL del archivo');
+            }
         } catch (err: any) {
-            // Solo loguear, el error real se maneja en onUploadError
-            console.error('Excepción en startUpload:', err);
+            console.error('❌ Error en upload:', err);
+
+            // Si el error es solo de callback, no es un error real
+            if (err?.message?.includes('callback') || err?.message?.includes('404')) {
+                console.warn('⚠️ Error de callback pero el archivo se subió');
+                // Intentar extraer URL del error o del objeto file si está disponible
+                setError('Imagen subida pero con error de callback. Intenta de nuevo.');
+            } else {
+                const errorMessage = err?.message || 'Error al subir la imagen';
+                setError(errorMessage);
+                onUploadError?.(errorMessage);
+            }
+
+            setPreview(null);
+            setIsUploading(false);
         }
-    }, [maxSizeMB, onUploadError, startUpload]);
+    }, [maxSizeMB, onUploadError, onUploadComplete, startUpload]);
 
     // Manejador de input file
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
