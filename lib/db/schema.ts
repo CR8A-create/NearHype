@@ -324,6 +324,33 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
     }),
 }));
 
+// Friend system relations
+export const friendRequestsRelations = relations(friendRequests, ({ one }) => ({
+    sender: one(users, {
+        fields: [friendRequests.senderId],
+        references: [users.id],
+        relationName: "sentRequests",
+    }),
+    receiver: one(users, {
+        fields: [friendRequests.receiverId],
+        references: [users.id],
+        relationName: "receivedRequests",
+    }),
+}));
+
+export const friendshipsRelations = relations(friendships, ({ one }) => ({
+    user1: one(users, {
+        fields: [friendships.userId1],
+        references: [users.id],
+        relationName: "friendshipsAsUser1",
+    }),
+    user2: one(users, {
+        fields: [friendships.userId2],
+        references: [users.id],
+        relationName: "friendshipsAsUser2",
+    }),
+}));
+
 // Communities relations
 export const communitiesRelations = relations(communities, ({ one, many }) => ({
     creator: one(users, {
