@@ -189,6 +189,32 @@ export async function POST(req: NextRequest, { params }: Params) {
                         username: replyToMsg[0].authorUsername,
                     },
                 };
+
+                // Crear notificación para el autor del mensaje original
+                const { createNotification } = await import('@/lib/notifications');
+
+                // Obtener ID del autor del mensaje original
+                const originalMessage = await db.query.communityMessages.findFirst({
+                    where: eq(communityMessages.id, newMessage.replyToId),
+                });
+
+                if (originalMessage && originalMessage.userId !== user.id) {
+                    // Solo notificar si no eres tú mismo
+                    await createNotification({
+                        userId: originalMessage.userId,
+                        type: 'chat_reply',
+                        title: `${user.username} respondió a tu mensaje`,
+                        message: newMessage.content.substring(0, 100),
+                        linkUrl: `/communities/${await params.then(p => p.slug)}`,
+                        metadata: {
+                            fromUserId: user.id,
+                            fromUsername: user.username,
+                            fromAvatarUrl: user.avatarUrl || undefined,
+                            communitySlug: await params.then(p => p.slug),
+                            messageId: newMessage.id,
+                        },
+                    });
+                }
             }
         }
 

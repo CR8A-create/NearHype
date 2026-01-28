@@ -6,6 +6,7 @@ import { UserButton, useUser } from "@clerk/nextjs";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import SettingsModal from "./SettingsModal";
+import NotificationBell from "./NotificationBell";
 
 export default function GlobalHeader() {
     const pathname = usePathname();
@@ -112,6 +113,9 @@ export default function GlobalHeader() {
                                 <Settings className="w-5 h-5" />
                                 <span className="hidden sm:inline">Config</span>
                             </button>
+
+                            {/* Notificaciones */}
+                            <NotificationBell />
 
                             {/* User Button (con configuración integrada) */}
                             {user && (

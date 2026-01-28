@@ -101,6 +101,33 @@ export const feedCache = pgTable("feed_cache", {
     expiresIdx: index("idx_feed_cache_expires").on(table.expiresAt),
 }));
 
+// ====== NOTIFICATIONS SYSTEM ======
+
+export const notifications = pgTable("notifications", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    type: varchar("type", { length: 50 }).notNull(), // 'chat_reply', 'post_comment', 'mention', etc.
+    title: varchar("title", { length: 255 }).notNull(),
+    message: text("message").notNull(),
+    linkUrl: varchar("link_url", { length: 500 }), // URL para abrir al hacer click
+    isRead: boolean("is_read").default(false),
+    createdAt: timestamp("created_at").defaultNow(),
+    // Metadata adicional en JSON (fromUser, postId, communitySlug, etc.)
+    metadata: jsonb("metadata").$type<{
+        fromUserId?: string;
+        fromUsername?: string;
+        fromAvatarUrl?: string;
+        communitySlug?: string;
+        postId?: string;
+        commentId?: string;
+        messageId?: string;
+    }>(),
+}, (table) => ({
+    userIdx: index("idx_notifications_user").on(table.userId),
+    userUnreadIdx: index("idx_notifications_user_unread").on(table.userId, table.isRead),
+    createdIdx: index("idx_notifications_created").on(table.createdAt),
+}));
+
 // ====== COMMUNITIES SYSTEM (Fase 1: Posts + Likes) ======
 
 // Comunidades
@@ -257,6 +284,13 @@ export const feedCacheRelations = relations(feedCache, ({ one }) => ({
     }),
 }));
 
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+    user: one(users, {
+        fields: [notifications.userId],
+        references: [users.id],
+    }),
+}));
+
 // Communities relations
 export const communitiesRelations = relations(communities, ({ one, many }) => ({
     creator: one(users, {
@@ -383,3 +417,7 @@ export type NewCommunityMessage = typeof communityMessages.$inferInsert;
 
 export type CommentVote = typeof commentVotes.$inferSelect;
 export type NewCommentVote = typeof commentVotes.$inferInsert;
+
+// Notification types
+export type Notification = typeof notifications.$inferSelect;
+export type NewNotification = typeof notifications.$inferInsert;
