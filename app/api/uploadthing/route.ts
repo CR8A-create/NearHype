@@ -5,7 +5,12 @@ import { ourFileRouter } from "./core";
 export const { GET, POST } = createRouteHandler({
     router: ourFileRouter,
     config: {
-        callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/uploadthing`,
+        // Deshabilitar polling de callbacks en desarrollo (localhost)
+        // UploadThing no puede hacer callbacks a localhost desde su servidor
+        skipPolling: process.env.NODE_ENV === 'development',
+        callbackUrl: process.env.NEXT_PUBLIC_APP_URL
+            ? `${process.env.NEXT_PUBLIC_APP_URL}/api/uploadthing`
+            : undefined,
         logLevel: "Info",
     },
 });
