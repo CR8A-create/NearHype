@@ -8,6 +8,7 @@ import GlobalHeader from "@/components/GlobalHeader";
 import MembersPanel from "./components/MembersPanel";
 import RoleManagementPanel from "./components/RoleManagementPanel";
 import EnhancedCommentInput from "./components/EnhancedCommentInput";
+import ImageUpload from "@/components/ImageUpload";
 
 type Community = {
     id: string;
@@ -1259,30 +1260,34 @@ function CreatePostModal({
                         </div>
                     )}
 
-                    {/* Image URL (for image posts) */}
+                    {/* Image Upload (for image posts) */}
                     {postType === 'image' && (
                         <div>
                             <label className="block text-white font-semibold mb-2">
-                                URL de la imagen
+                                Subir Imagen
                             </label>
-                            <input
-                                type="url"
-                                value={formData.mediaUrl}
-                                onChange={(e) => setFormData({ ...formData, mediaUrl: e.target.value })}
-                                placeholder="https://ejemplo.com/imagen.jpg"
-                                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            <ImageUpload
+                                endpoint="postImage"
+                                onUploadComplete={(url: string) => setFormData({ ...formData, mediaUrl: url })}
+                                onUploadError={(err: string) => setError(err)}
+                                maxSizeMB={4}
                             />
-                            <p className="text-sm text-gray-500 mt-1">Pega la URL de una imagen</p>
                             {formData.mediaUrl && (
-                                <div className="mt-3">
+                                <div className="mt-3 relative">
                                     <img
                                         src={formData.mediaUrl}
                                         alt="Preview"
-                                        className="rounded-lg max-h-64 object-cover"
-                                        onError={(e) => {
-                                            (e.target as HTMLImageElement).style.display = 'none';
-                                        }}
+                                        className="rounded-lg max-h-64 object-cover w-full"
                                     />
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, mediaUrl: '' })}
+                                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
                                 </div>
                             )}
                         </div>
