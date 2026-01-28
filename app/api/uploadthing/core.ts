@@ -12,10 +12,9 @@ export const ourFileRouter = {
             if (!user) throw new Error("No autenticado");
             return { userId: user.id };
         })
-        .onUploadComplete(async ({ metadata, file }) => {
-            console.log("Upload completo para usuario:", metadata.userId);
-            console.log("URL del archivo:", file.url);
-            return { uploadedBy: metadata.userId, url: file.url };
+        .onUploadComplete(async ({ file }) => {
+            // Solo devolvemos la URL, sin complejidad
+            return { url: file.url };
         }),
 
     // Uploader de imágenes para comentarios y chat
@@ -25,10 +24,8 @@ export const ourFileRouter = {
             if (!user) throw new Error("No autenticado");
             return { userId: user.id };
         })
-        .onUploadComplete(async ({ metadata, file }) => {
-            console.log("Imagen de mensaje subida por:", metadata.userId);
-            console.log("URL:", file.url);
-            return { uploadedBy: metadata.userId, url: file.url };
+        .onUploadComplete(async ({ file }) => {
+            return { url: file.url };
         }),
 
     // Uploader para avatares de comunidades
@@ -38,8 +35,7 @@ export const ourFileRouter = {
             if (!user) throw new Error("No autenticado");
             return { userId: user.id };
         })
-        .onUploadComplete(async ({ metadata, file }) => {
-            console.log("Avatar de comunidad subido");
+        .onUploadComplete(async ({ file }) => {
             return { url: file.url };
         }),
 } satisfies FileRouter;
