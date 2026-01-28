@@ -128,6 +128,38 @@ export const friendships = pgTable("friendships", {
     user2Idx: index("idx_friendships_user2").on(table.userId2),
 }));
 
+// ====== DIRECT MESSAGES SYSTEM ======
+
+// Conversaciones DM
+export const dmConversations = pgTable("dm_conversations", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId1: uuid("user_id_1").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    userId2: uuid("user_id_2").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    lastMessageAt: timestamp("last_message_at").defaultNow(),
+    createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+    user1User2Idx: uniqueIndex("idx_dm_conversations_users").on(table.userId1, table.userId2),
+    user1LastMsgIdx: index("idx_dm_conversations_user1_last").on(table.userId1, table.lastMessageAt),
+    user2LastMsgIdx: index("idx_dm_conversations_user2_last").on(table.userId2, table.lastMessageAt),
+}));
+
+// Mensajes DM
+export const dmMessages = pgTable("dm_messages", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    conversationId: uuid("conversation_id").references(() => dmConversations.id, { onDelete: "cascade" }).notNull(),
+    senderId: uuid("sender_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    content: text("content").notNull(),
+    mediaUrl: text("media_url"),
+    isRead: boolean("is_read").default(false),
+    createdAt: timestamp("created_at").defaultNow(),
+    // Soft delete para moderación
+    deletedAt: timestamp("deleted_at"),
+    deletedBy: uuid("deleted_by").references(() => users.id, { onDelete: "set null" }),
+}, (table) => ({
+    conversationCreatedIdx: index("idx_dm_messages_conversation_created").on(table.conversationId, table.createdAt),
+    senderIdx: index("idx_dm_messages_sender").on(table.senderId),
+}));
+
 // ====== NOTIFICATIONS SYSTEM ======
 
 export const notifications = pgTable("notifications", {
@@ -351,6 +383,32 @@ export const friendshipsRelations = relations(friendships, ({ one }) => ({
     }),
 }));
 
+// Direct messages relations
+export const dmConversationsRelations = relations(dmConversations, ({ one, many }) => ({
+    user1: one(users, {
+        fields: [dmConversations.userId1],
+        references: [users.id],
+        relationName: "dmConversationsAsUser1",
+    }),
+    user2: one(users, {
+        fields: [dmConversations.userId2],
+        references: [users.id],
+        relationName: "dmConversationsAsUser2",
+    }),
+    messages: many(dmMessages),
+}));
+
+export const dmMessagesRelations = relations(dmMessages, ({ one }) => ({
+    conversation: one(dmConversations, {
+        fields: [dmMessages.conversationId],
+        references: [dmConversations.id],
+    }),
+    sender: one(users, {
+        fields: [dmMessages.senderId],
+        references: [users.id],
+    }),
+}));
+
 // Communities relations
 export const communitiesRelations = relations(communities, ({ one, many }) => ({
     creator: one(users, {
@@ -488,4 +546,12 @@ export type NewFriendRequest = typeof friendRequests.$inferInsert;
 
 export type Friendship = typeof friendships.$inferSelect;
 export type NewFriendship = typeof friendships.$inferInsert;
+
+// Direct messages types
+export type DmConversation = typeof dmConversations.$inferSelect;
+export type NewDmConversation = typeof dmConversations.$inferInsert;
+
+export type DmMessage = typeof dmMessages.$inferSelect;
+export type NewDmMessage = typeof dmMessages.$inferInsert;
+
 
