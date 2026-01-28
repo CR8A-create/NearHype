@@ -167,6 +167,21 @@ export const dmMessages = pgTable("dm_messages", {
     senderIdx: index("idx_dm_messages_sender").on(table.senderId),
 }));
 
+// ====== DISCOVER SYSTEM ======
+
+// Tracking de perfiles vistos/swipeados
+export const profileSwipes = pgTable("profile_swipes", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    targetUserId: uuid("target_user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    action: varchar("action", { length: 20 }).notNull(), // 'like', 'skip'
+    createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+    userTargetIdx: uniqueIndex("idx_profile_swipes_user_target").on(table.userId, table.targetUserId),
+    userActionIdx: index("idx_profile_swipes_user_action").on(table.userId, table.action),
+    userCreatedIdx: index("idx_profile_swipes_user_created").on(table.userId, table.createdAt),
+}));
+
 // ====== NOTIFICATIONS SYSTEM ======
 
 export const notifications = pgTable("notifications", {
@@ -560,5 +575,10 @@ export type NewDmConversation = typeof dmConversations.$inferInsert;
 
 export type DmMessage = typeof dmMessages.$inferSelect;
 export type NewDmMessage = typeof dmMessages.$inferInsert;
+
+// Discover types
+export type ProfileSwipe = typeof profileSwipes.$inferSelect;
+export type NewProfileSwipe = typeof profileSwipes.$inferInsert;
+
 
 
