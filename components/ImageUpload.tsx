@@ -156,14 +156,14 @@ export default function ImageUpload({
             {!preview && (
                 <div
                     className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition ${isDragging
-                            ? 'border-indigo-500 bg-indigo-500/10'
-                            : 'border-white/20 hover:border-indigo-500/50 hover:bg-white/5'
+                        ? 'border-indigo-500 bg-indigo-500/10'
+                        : 'border-white/20 hover:border-indigo-500/50 hover:bg-white/5'
                         }`}
                     onClick={() => fileInputRef.current?.click()}
                 >
                     <ImageIcon className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                     <p className="text-gray-300 text-sm mb-1">
-                        Click, arrastra una imagen o pega (Ctrl+V)
+                        Click o arrastra una imagen
                     </p>
                     <p className="text-gray-500 text-xs">
                         Máximo {maxSizeMB}MB • JPG, PNG, GIF, WebP
