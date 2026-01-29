@@ -79,7 +79,7 @@ export async function GET() {
 
         const communityIds = relevantCommunities.map(c => c.id);
 
-        let allPosts = [];
+        let allPosts: any[] = [];
 
         if (communityIds.length > 0) {
             // Obtener posts de comunidades relevantes
