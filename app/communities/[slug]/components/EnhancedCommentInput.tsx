@@ -130,7 +130,6 @@ export default function EnhancedCommentInput({ postId, parentCommentId, onCommen
                         type="button"
                         onClick={() => {
                             setShowImageUpload(!showImageUpload);
-                            setShowLinkInput(false);
                         }}
                         className={`p-2 rounded-lg transition ${showImageUpload || mediaUrl ? 'bg-indigo-500/20 text-indigo-400' : 'text-gray-400 hover:bg-white/10 hover:text-white'}`}
                         title="Subir imagen"
