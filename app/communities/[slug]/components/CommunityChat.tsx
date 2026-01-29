@@ -129,7 +129,7 @@ export default function CommunityChat({ communitySlug }: { communitySlug: string
                                     console.error('Error deleting message:', error);
                                 }
                             }}
-                            currentUsername={user?.username}
+                            currentUsername={user?.username || undefined}
                         />
                     ))
                 )}
