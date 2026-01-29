@@ -30,13 +30,17 @@ export default function NotificationBell() {
     const loadNotifications = async () => {
         try {
             const res = await fetch('/api/notifications');
-            if (!res.ok) return;
+            if (!res.ok) {
+                console.warn('Notifications API not available yet');
+                return;
+            }
 
             const data = await res.json();
             setNotifications(data.notifications || []);
             setUnreadCount(data.unreadCount || 0);
         } catch (error) {
-            console.error('Error loading notifications:', error);
+            console.warn('Notifications feature not ready yet:', error);
+            // Silenciar el error para no romper la UI
         }
     };
 

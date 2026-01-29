@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { Users, ChevronRight, ChevronLeft, Shield, Crown, Wrench } from "lucide-react";
+import { useUser } from "@clerk/nextjs";
+import Link from "next/link";
+import AddFriendButton from "@/components/AddFriendButton";
 
 type Member = {
     id: string;
@@ -113,25 +116,32 @@ export default function MembersPanel({ communitySlug, isCollapsed, onToggle }: M
                     members.map((member) => (
                         <div
                             key={member.id}
-                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition"
+                            className="p-2 rounded-lg hover:bg-white/5 transition"
                         >
-                            {member.avatarUrl ? (
-                                <img
-                                    src={member.avatarUrl}
-                                    alt={member.username}
-                                    className="w-10 h-10 rounded-full"
-                                />
-                            ) : (
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold">
-                                    {member.username[0].toUpperCase()}
+                            <div className="flex items-center gap-3 mb-2">
+                                <Link href={`/users/${member.username}`}>
+                                    {member.avatarUrl ? (
+                                        <img
+                                            src={member.avatarUrl}
+                                            alt={member.username}
+                                            className="w-10 h-10 rounded-full cursor-pointer hover:opacity-80 transition"
+                                        />
+                                    ) : (
+                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold cursor-pointer hover:opacity-80 transition">
+                                            {member.username[0].toUpperCase()}
+                                        </div>
+                                    )}
+                                </Link>
+                                <div className="flex-1 min-w-0">
+                                    <Link href={`/users/${member.username}`}>
+                                        <div className="text-white font-medium truncate hover:text-indigo-400 transition cursor-pointer">
+                                            {member.username}
+                                        </div>
+                                    </Link>
+                                    {getRoleBadge(member.role)}
                                 </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                                <div className="text-white font-medium truncate">
-                                    {member.username}
-                                </div>
-                                {getRoleBadge(member.role)}
                             </div>
+                            <AddFriendButton username={member.username} />
                         </div>
                     ))
                 )}
