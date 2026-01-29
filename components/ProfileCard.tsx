@@ -83,14 +83,14 @@ export default function ProfileCard({ profile, onSwipe, isTop }: ProfileCardProp
     const rotation = deltaX * 0.1;
     const opacity = Math.max(0.3, 1 - Math.abs(deltaX) / 200);
 
-    const cardStyle = {
+    const cardStyle: React.CSSProperties = {
         transform: exitX !== 0
             ? `translateX(${exitX}px) translateY(${exitY}px) rotate(${rotation}deg)`
             : `translateX(${deltaX}px) rotate(${rotation}deg)`,
         opacity: exitX !== 0 ? 0 : opacity,
         transition: exitX !== 0 ? 'all 0.3s ease-out' : deltaX === 0 ? 'transform 0.3s ease-out' : 'none',
         zIndex: isTop ? 10 : 5,
-        pointerEvents: isTop ? 'auto' : 'none' as const,
+        pointerEvents: isTop ? 'auto' : 'none',
     };
 
     return (
