@@ -272,7 +272,7 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
                                             <div className="w-full max-w-xs">
                                                 <ImageUpload
                                                     endpoint="userAvatar"
-                                                    onChange={(url) => {
+                                                    onUploadComplete={(url) => {
                                                         if (url) {
                                                             setPreviewAvatar(url);
                                                             const key = url.split('/').pop();
