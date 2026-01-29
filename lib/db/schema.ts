@@ -89,14 +89,18 @@ export const feedCache = pgTable("feed_cache", {
     userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
     feedData: jsonb("feed_data").$type<{
         id: string;
-        type: string;
         title: string;
         description: string;
-        imageUrl?: string;
-        author: string;
-        timestamp: string;
-        tags: string[];
+        url: string;
+        source: string;
+        publishedAt: string;
+        location?: {
+            city: string;
+            distance: number;
+        };
+        relevanceScore: number;
         category: string;
+        imageUrl?: string;
     }[]>().notNull(),
     cacheKey: varchar("cache_key", { length: 255 }).unique().notNull(),
     generatedAt: timestamp("generated_at").defaultNow(),

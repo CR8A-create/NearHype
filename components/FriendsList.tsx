@@ -16,10 +16,40 @@ export default function FriendsList() {
     const [isLoading, setIsLoading] = useState(true);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    const [contextMenu, setContextMenu] = useState<{ x: number, y: number, friend: Friend } | null>(null);
 
     useEffect(() => {
         loadFriends();
+
+        const handleClickOutside = () => setContextMenu(null);
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
     }, []);
+
+    const handleContextMenu = (e: React.MouseEvent, friend: Friend) => {
+        e.preventDefault();
+        setContextMenu({
+            x: e.clientX,
+            y: e.clientY,
+            friend
+        });
+    };
+
+    const handleRemoveFriend = async (friend: Friend) => {
+        if (!confirm(`¿Eliminar a ${friend.username} de tus amigos?`)) return;
+
+        try {
+            const res = await fetch(`/api/friends/${friend.id}`, {
+                method: 'DELETE',
+            });
+            if (res.ok) {
+                loadFriends();
+                setContextMenu(null);
+            }
+        } catch (error) {
+            console.error('Error removing friend:', error);
+        }
+    };
 
     const loadFriends = async () => {
         try {
@@ -86,7 +116,7 @@ export default function FriendsList() {
             </div>
 
             {/* Friends List */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto" onClick={() => setContextMenu(null)}>
                 {isLoading ? (
                     <div className="flex items-center justify-center py-8">
                         <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
@@ -105,84 +135,62 @@ export default function FriendsList() {
                 ) : (
                     <div className="divide-y divide-white/5">
                         {filteredFriends.map((friend) => (
-                            <FriendItem
+                            <div
                                 key={friend.id}
-                                friend={friend}
-                                onRemove={() => loadFriends()}
-                            />
+                                className="p-3 hover:bg-white/5 transition cursor-context-menu"
+                                onContextMenu={(e) => handleContextMenu(e, friend)}
+                            >
+                                <div className="flex items-center gap-3">
+                                    {friend.avatarUrl ? (
+                                        <img
+                                            src={friend.avatarUrl}
+                                            alt={friend.username}
+                                            className="w-10 h-10 rounded-full"
+                                        />
+                                    ) : (
+                                        <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold">
+                                            {friend.username[0].toUpperCase()}
+                                        </div>
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-white font-semibold truncate">
+                                            {friend.username}
+                                        </p>
+                                        {friend.friendsSince && (
+                                            <p className="text-xs text-gray-500">
+                                                Amigos desde {new Date(friend.friendsSince).toLocaleDateString('es-ES', { month: 'short', year: 'numeric' })}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
                         ))}
                     </div>
                 )}
             </div>
-        </div>
-    );
-}
 
-function FriendItem({ friend, onRemove }: { friend: Friend; onRemove: () => void }) {
-    const [showActions, setShowActions] = useState(false);
-
-    const handleRemoveFriend = async () => {
-        if (!confirm(`¿Eliminar a ${friend.username} de tus amigos?`)) return;
-
-        try {
-            const res = await fetch(`/api/friends/${friend.id}`, {
-                method: 'DELETE',
-            });
-            if (res.ok) {
-                onRemove();
-            }
-        } catch (error) {
-            console.error('Error removing friend:', error);
-        }
-    };
-
-    return (
-        <div
-            className="p-3 hover:bg-white/5 transition cursor-pointer relative"
-            onMouseEnter={() => setShowActions(true)}
-            onMouseLeave={() => setShowActions(false)}
-        >
-            <div className="flex items-center gap-3">
-                {friend.avatarUrl ? (
-                    <img
-                        src={friend.avatarUrl}
-                        alt={friend.username}
-                        className="w-10 h-10 rounded-full"
-                    />
-                ) : (
-                    <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold">
-                        {friend.username[0].toUpperCase()}
+            {/* Context Menu */}
+            {contextMenu && (
+                <div
+                    className="fixed z-50 bg-gray-800 border border-white/10 rounded-lg shadow-xl overflow-hidden min-w-[160px] animate-in fade-in zoom-in-95 duration-100"
+                    style={{ top: contextMenu.y, left: contextMenu.x }}
+                >
+                    <div className="py-1">
+                        <Link
+                            href={`/messages?user=${contextMenu.friend.username}`}
+                            className="w-full text-left px-4 py-3 text-sm text-white hover:bg-white/5 transition flex items-center gap-3"
+                        >
+                            <MessageCircle className="w-4 h-4 text-indigo-400" />
+                            Enviar mensaje
+                        </Link>
+                        <button
+                            onClick={() => handleRemoveFriend(contextMenu.friend)}
+                            className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-white/5 transition flex items-center gap-3 border-t border-white/5"
+                        >
+                            <X className="w-4 h-4" />
+                            Eliminar amigo
+                        </button>
                     </div>
-                )}
-                <div className="flex-1 min-w-0">
-                    <p className="text-white font-semibold truncate">
-                        {friend.username}
-                    </p>
-                    {friend.friendsSince && (
-                        <p className="text-xs text-gray-500">
-                            Amigos desde {new Date(friend.friendsSince).toLocaleDateString('es-ES', { month: 'short', year: 'numeric' })}
-                        </p>
-                    )}
-                </div>
-            </div>
-
-            {/* Actions on hover */}
-            {showActions && (
-                <div className="absolute top-2 right-2 flex gap-1">
-                    <Link
-                        href={`/messages?user=${friend.username}`}
-                        className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-                        title="Enviar mensaje"
-                    >
-                        <MessageCircle className="w-4 h-4" />
-                    </Link>
-                    <button
-                        onClick={handleRemoveFriend}
-                        className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-                        title="Eliminar amigo"
-                    >
-                        <X className="w-4 h-4" />
-                    </button>
                 </div>
             )}
         </div>

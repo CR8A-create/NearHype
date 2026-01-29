@@ -22,12 +22,29 @@ type MembersPanelProps = {
 };
 
 export default function MembersPanel({ communitySlug, isCollapsed, onToggle }: MembersPanelProps) {
+    const [contextMenu, setContextMenu] = useState<{ x: number, y: number, memberUsername: string } | null>(null);
     const [members, setMembers] = useState<Member[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const { user } = useUser();
 
     useEffect(() => {
         loadMembers();
-    }, [communitySlug]);
+        const handleClickOutside = () => setContextMenu(null);
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, []);
+
+    const handleContextMenu = (e: React.MouseEvent, memberUsername: string) => {
+        e.preventDefault();
+        // Don't show for self
+        if (user?.username === memberUsername) return;
+
+        setContextMenu({
+            x: e.clientX,
+            y: e.clientY,
+            memberUsername
+        });
+    };
 
     const loadMembers = async () => {
         try {
@@ -116,9 +133,10 @@ export default function MembersPanel({ communitySlug, isCollapsed, onToggle }: M
                     members.map((member) => (
                         <div
                             key={member.id}
-                            className="p-2 rounded-lg hover:bg-white/5 transition"
+                            className="p-2 rounded-lg hover:bg-white/5 transition cursor-context-menu"
+                            onContextMenu={(e) => handleContextMenu(e, member.username)}
                         >
-                            <div className="flex items-center gap-3 mb-2">
+                            <div className="flex items-center gap-3">
                                 <Link href={`/users/${member.username}`}>
                                     {member.avatarUrl ? (
                                         <img
@@ -141,11 +159,25 @@ export default function MembersPanel({ communitySlug, isCollapsed, onToggle }: M
                                     {getRoleBadge(member.role)}
                                 </div>
                             </div>
-                            <AddFriendButton username={member.username} />
                         </div>
                     ))
                 )}
             </div>
+            {/* Context Menu */}
+            {contextMenu && (
+                <div
+                    className="fixed z-50 bg-gray-800 border border-white/10 rounded-lg shadow-xl overflow-hidden min-w-[160px] animate-in fade-in zoom-in-95 duration-100"
+                    style={{ top: contextMenu.y, left: contextMenu.x }}
+                >
+                    <div className="py-1">
+                        <AddFriendButton
+                            username={contextMenu.memberUsername}
+                            className="w-full text-left px-4 py-3 text-sm hover:bg-white/5 transition flex items-center gap-3 cursor-pointer rounded-none bg-transparent hover:bg-opacity-10"
+                            minimal={true} // Need to update AddFriendButton to accept this or custom class
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

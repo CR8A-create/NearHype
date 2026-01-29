@@ -3,13 +3,10 @@ import { db } from "@/lib/db";
 import { users, userInterests, userLocations, feedCache } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { orchestrateQueries } from "@/lib/ai/orchestrator";
-import { fetchGDELTNews } from "@/lib/apis/gdelt";
-import { fetchRedditPosts } from "@/lib/apis/reddit";
-import { fetchNewsAPI, fetchLocalNews } from "@/lib/apis/newsapi";
+import { fetchNewsAPI, fetchLocalNews, fetchInterestNews } from "@/lib/apis/newsapi";
 import { fetchWikipediaForInterests } from "@/lib/apis/wikipedia";
-import { searchEvents, searchTournaments, searchConcerts } from "@/lib/apis/google_search";
 import crypto from "crypto";
+import { searchDuckDuckGo, searchGoogleNewsRSS } from "@/lib/apis/free_search";
 
 interface ContentItem {
     id: string;
@@ -61,10 +58,13 @@ export async function GET() {
             where: eq(feedCache.cacheKey, cacheKey),
         });
 
-        if (existingCache && existingCache.expiresAt > new Date()) {
+        // Versioning del cache para forzar updates cuando cambiamos lógica
+        const CURRENT_API_VERSION = 3;
+
+        if (existingCache && existingCache.expiresAt > new Date() && existingCache.feedData.length > 10 && existingCache.apiVersion === CURRENT_API_VERSION) {
             console.log('Returning cached feed');
             return NextResponse.json({
-                items: existingCache.contentItems,
+                items: existingCache.feedData,
                 generatedAt: existingCache.generatedAt?.toISOString() || new Date().toISOString(),
                 userLocation: user.locations[0].city,
                 totalSources: 5, // Múltiples fuentes
@@ -80,55 +80,133 @@ export async function GET() {
             country: user.locations[0].countryCode || "ES"
         };
 
-        // 4. Buscar contenido en TODAS las APIs en paralelo
-        const allResults: any[] = [];
+        // 4. ESTRATEGIA DE BÚSQUEDA POR ANILLOS (EXPANDING RINGS)
+        // Ring 1: Local (Ciudad)
+        // Ring 2: Nacional (País)
+        // Ring 3: Global (Interés general)
 
-        // API 1: Orchestración con Gemini (GDELT + Reddit) - Existente
+        const allResults: ContentItem[] = [];
+
+        // Seleccionar 3 intereses principales para evitar saturar
+        const topInterests = interests.slice(0, 3);
+        const mainLocation = location.city;
+        const mainCountry = location.country;
+
+        console.log(`Searching for interests: ${topInterests.join(', ')} in ${mainLocation}`);
+
+        // 4A. ESTRATEGIA: Búsqueda Local Genérica (PRIORIDAD MÁXIMA)
+        // Buscamos noticias generales de la ciudad independientemente de los intereses
+        // Esto soluciona el problema de "no salen noticias locales" s los intereses son muy nicho
         try {
-            const orchestration = await orchestrateQueries(interests, location, "es");
-            const orchestratedContent = await executeOrchestration(orchestration, interests);
-            allResults.push(...orchestratedContent);
-        } catch (error) {
-            console.error('Orchestration error:', error);
+            console.log(`Fetching generic local news for: ${mainLocation}`);
+            const localGeneralQuery = `Noticias ${mainLocation}`;
+            const localGeneralItems = await searchGoogleNewsRSS(localGeneralQuery, 10); // Traemos 10 para asegurar
+
+            localGeneralItems.forEach(item => {
+                allResults.push({
+                    id: crypto.randomUUID(),
+                    title: item.title,
+                    description: item.description,
+                    url: item.url,
+                    source: item.source,
+                    publishedAt: item.publishedAt,
+                    relevanceScore: 100, // MAXIMA PRIORIDAD - Salen primero
+                    category: 'news',
+                    imageUrl: undefined,
+                    location: { city: mainLocation, distance: 0 }
+                });
+            });
+            // Delay cortés
+            await new Promise(r => setTimeout(r, 500));
+        } catch (e) { console.error('Error generic local:', e); }
+
+        // 4B. Búsqueda por Intereses (Loop secuencial)
+        // Reducimos queries por interés para ser más eficientes
+        for (const interest of topInterests) {
+            console.log(`Processing interest: ${interest}`);
+
+            // --- RING 1: Búsqueda Local (1 query potentes) ---
+            try {
+                const localQuery = `${interest} noticias eventos ${mainLocation}`;
+                const localItems = await searchDuckDuckGo(localQuery, 'es-es', 5);
+
+                localItems.forEach(item => {
+                    allResults.push({
+                        ...normalizeItem(item, interest, 'events'),
+                        location: { city: mainLocation, distance: 10 },
+                        relevanceScore: 95
+                    });
+                });
+                // Delay cortés
+                await new Promise(r => setTimeout(r, 800));
+            } catch (e) {
+                console.error(`Error fetching local for ${interest}:`, e);
+            }
+
+            // --- RING 2: Búsqueda Nacional (1 query) ---
+            try {
+                const nationalQuery = `${interest} novedades ${mainCountry}`;
+                const nationalItems = await searchDuckDuckGo(nationalQuery, 'es-es', 4);
+
+                nationalItems.forEach(item => {
+                    allResults.push({
+                        ...normalizeItem(item, interest, 'news'),
+                        location: { city: mainCountry, distance: 500 },
+                        relevanceScore: 70
+                    });
+                });
+                await new Promise(r => setTimeout(r, 800));
+            } catch (e) { console.error(e); }
+
+            // --- RING 3: Búsqueda Global (2 queries variadas) ---
+            try {
+                // Alternamos queries para dar variedad sin explotar
+                const varietyOptions = [
+                    `${interest} últimas noticias`,
+                    `${interest} curiosidades`,
+                    `${interest} guía`,
+                    `mejor sobre ${interest}`
+                ];
+                // Elegimos 1 query aleatoria
+                const randomQuery = varietyOptions[Math.floor(Math.random() * varietyOptions.length)];
+
+                const globalItems = await searchDuckDuckGo(randomQuery, 'es-es', 4);
+
+                globalItems.forEach(item => {
+                    allResults.push({
+                        ...normalizeItem(item, interest, 'news'),
+                        location: { city: 'Global', distance: 5000 },
+                        relevanceScore: 60
+                    });
+                });
+                await new Promise(r => setTimeout(r, 800));
+            } catch (e) { console.error(e); }
         }
 
-        // API 2: NewsAPI (100 req/día gratis para siempre)
+
+
+        // API 2: NewsAPI (Volumen masivo en Inglés - como pidió el usuario)
+        // Esto garantiza que siempre haya ~20-30 noticias frescas aunque fallen las búsquedas locales
         try {
-            const newsApiResults = await Promise.allSettled([
-                fetchLocalNews(location.city, interests, 10), // Noticias locales
-                ...interests.slice(0, 3).map(interest => fetchNewsAPI(interest, 'es', 5)) // Noticias por interés
-            ]);
-            newsApiResults.forEach(result => {
-                if (result.status === 'fulfilled') {
-                    allResults.push(...normalizeArticles(result.value, 'news', interests, 60));
-                }
+            console.log('Fetching high-volume English news from NewsAPI...');
+            const newsApiResults = await fetchInterestNews(interests, 30);
+
+            newsApiResults.forEach(item => {
+                allResults.push({
+                    id: crypto.randomUUID(),
+                    title: item.title,
+                    description: item.description,
+                    url: item.url,
+                    source: item.source,
+                    publishedAt: item.publishedAt,
+                    relevanceScore: 65, // Score medio aceptable
+                    category: mapInterestToCategory(interests[0] || 'general'), // Aproximación
+                    imageUrl: item.socialimage,
+                    location: { city: 'Global (EN)', distance: 8000 }
+                });
             });
         } catch (error) {
             console.error('NewsAPI error:', error);
-        }
-
-        // API 3: Wikipedia (100% gratis, ilimitado)
-        try {
-            const wikiContent = await fetchWikipediaForInterests(interests, 'es');
-            allResults.push(...normalizeArticles(wikiContent, 'wiki', interests, 40));
-        } catch (error) {
-            console.error('Wikipedia error:', error);
-        }
-
-        // API 4: Google Search (preparado, desactivado por default)
-        try {
-            const googleResults = await Promise.allSettled([
-                searchEvents(interests[0] || '', location.city),
-                searchTournaments(interests[0] || '', location.country),
-                ...interests.filter(i => isPotentialArtist(i)).map(artist => searchConcerts(artist, location.city))
-            ]);
-            googleResults.forEach(result => {
-                if (result.status === 'fulfilled') {
-                    allResults.push(...normalizeArticles(result.value, 'events', interests, 80));
-                }
-            });
-        } catch (error) {
-            console.error('Google Search error:', error);
         }
 
         // 5. DEDUPLICACIÓN por URL
@@ -140,16 +218,19 @@ export async function GET() {
         // 7. Guardar en cache
         const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
 
+        // Calcular fuentes reales únicas
+        const uniqueSourcesCount = new Set(uniqueContent.map(item => item.source)).size;
+
         // Eliminar cache antiguo
         await db.delete(feedCache).where(eq(feedCache.cacheKey, cacheKey));
 
         // Insertar nuevo cache
         await db.insert(feedCache).values({
             userId: user.id,
-            contentItems: rankedContent,
+            feedData: rankedContent,
             cacheKey: cacheKey,
             expiresAt: expiresAt,
-            apiVersion: 1,
+            apiVersion: 3, // CURRENT_API_VERSION
         });
 
         // 8. Retornar feed
@@ -157,7 +238,7 @@ export async function GET() {
             items: rankedContent,
             generatedAt: new Date().toISOString(),
             userLocation: location.city,
-            totalSources: 5,
+            totalSources: uniqueSourcesCount, // Número real de fuentes
             cached: false,
         });
 
@@ -189,105 +270,48 @@ function deduplicateByUrl(items: ContentItem[]): ContentItem[] {
     return unique;
 }
 
-// Normalizar artículos de cualquier fuente
-function normalizeArticles(articles: any[], category: string, interests: string[], baseScore: number): ContentItem[] {
-    return articles.map(article => ({
+// Mapeo simple de categorías a imágenes placeholder de alta calidad
+const PLACEHOLDER_IMAGES: Record<string, string[]> = {
+    'gaming': [
+        'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1538481199705-c710db4e963f?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1552820728-8b83bb6b773f?auto=format&fit=crop&w=800&q=80'
+    ],
+    'tech': [
+        'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=800&q=80'
+    ],
+    'music': [
+        'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=800&q=80'
+    ],
+    'news': [
+        'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=800&q=80', // Newspaper
+        'https://images.unsplash.com/photo-1495020689067-958852a7765e?auto=format&fit=crop&w=800&q=80'  // News generic
+    ],
+    'default': [
+        'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=800&q=80'
+    ]
+};
+
+function getPlaceholder(category: string): string {
+    const images = PLACEHOLDER_IMAGES[category] || PLACEHOLDER_IMAGES['default'];
+    return images[Math.floor(Math.random() * images.length)];
+}
+
+// Normalizar item individual
+function normalizeItem(item: any, interest: string, category: string): ContentItem {
+    return {
         id: crypto.randomUUID(),
-        title: article.title || '',
-        description: article.description || article.title?.substring(0, 200) || '',
-        url: article.url || '',
-        source: article.source || 'Unknown',
-        publishedAt: article.publishedAt || new Date().toISOString(),
-        relevanceScore: calculateBasicScore(article, interests, baseScore),
+        title: item.title || '',
+        description: item.description || '',
+        url: item.url || '',
+        source: item.source || 'Web',
+        publishedAt: item.publishedAt || new Date().toISOString(),
+        relevanceScore: 50, // Score base, se ajusta luego
         category: category,
-        imageUrl: article.socialimage || article.thumbnail?.source || undefined,
-    }));
-}
-
-// Ejecutar orquestación de Gemini (GDELT + Reddit)
-async function executeOrchestration(orchestration: any, interests: string[]): Promise<ContentItem[]> {
-    const contentPromises = orchestration.queries.map(async (query: any) => {
-        switch (query.source) {
-            case 'gdelt':
-                return await fetchGDELTNews(
-                    query.params.keywords,
-                    query.params.language,
-                    query.params.maxResults
-                );
-            case 'reddit':
-                return await fetchRedditPosts(
-                    query.params.subreddits,
-                    query.params.limit
-                );
-            default:
-                return [];
-        }
-    });
-
-    const results = await Promise.allSettled(contentPromises);
-    const allContent: ContentItem[] = [];
-
-    results.forEach((result, index) => {
-        if (result.status === 'fulfilled') {
-            const query = orchestration.queries[index];
-            const items = result.value;
-
-            if (query.source === 'gdelt') {
-                items.forEach((article: any) => {
-                    allContent.push({
-                        id: crypto.randomUUID(),
-                        title: article.title,
-                        description: article.description || article.title.substring(0, 200),
-                        url: article.url,
-                        source: article.source || 'GDELT',
-                        publishedAt: article.publishedAt,
-                        relevanceScore: calculateGDELTScore(article, interests, query.priority),
-                        category: mapInterestToCategory((query as any).interest_category || 'news'),
-                        imageUrl: article.socialimage || undefined,
-                    });
-                });
-            } else if (query.source === 'reddit') {
-                items.forEach((post: any) => {
-                    allContent.push({
-                        id: crypto.randomUUID(),
-                        title: post.title,
-                        description: post.selftext?.substring(0, 200) || post.title,
-                        url: `https://reddit.com${post.permalink}`,
-                        source: `r/${post.subreddit}`,
-                        publishedAt: new Date(post.created * 1000).toISOString(),
-                        relevanceScore: calculateRedditScore(post, interests),
-                        category: 'community',
-                    });
-                });
-            }
-        }
-    });
-
-    return allContent;
-}
-
-// Detectar si un interés es potencialmente un artista/banda
-function isPotentialArtist(interest: string): boolean {
-    const lower = interest.toLowerCase();
-    // Heurística simple: si contiene palabras clave de música o es una banda conocida
-    const musicKeywords = ['band', 'música', 'music', 'singer', 'cantante', 'artista'];
-    return musicKeywords.some(keyword => lower.includes(keyword));
-}
-
-// Calcular score básico
-function calculateBasicScore(article: any, interests: string[], baseScore: number): number {
-    let score = baseScore;
-
-    const titleLower = (article.title || '').toLowerCase();
-    interests.forEach(interest => {
-        if (titleLower.includes(interest.toLowerCase())) {
-            score += 10;
-        }
-    });
-
-    if (article.socialimage || article.thumbnail) score += 5;
-
-    return Math.min(score, 100);
+        imageUrl: item.socialimage || getPlaceholder(category) // Fallback a placeholder visual
+    };
 }
 
 // Generar cache key único
@@ -296,56 +320,12 @@ function generateCacheKey(userId: string, interests: string[]): string {
     return crypto.createHash('md5').update(content).digest('hex');
 }
 
-// Calcular score de relevancia para posts de Reddit
-function calculateRedditScore(post: any, interests: string[]): number {
-    let score = 40; // Base score
-
-    if (post.score > 100) score += 20;
-    else if (post.score > 50) score += 10;
-    else if (post.score > 10) score += 5;
-
-    if (post.num_comments > 50) score += 10;
-    else if (post.num_comments > 20) score += 5;
-
-    const hoursAgo = (Date.now() - (post.created * 1000)) / (1000 * 60 * 60);
-    if (hoursAgo < 6) score += 15;
-    else if (hoursAgo < 24) score += 10;
-    else if (hoursAgo < 48) score += 5;
-
-    const titleLower = post.title.toLowerCase();
-    const matchedInterests = interests.filter(interest =>
-        titleLower.includes(interest.toLowerCase())
-    );
-    score += matchedInterests.length * 5;
-
-    return Math.min(score, 100);
-}
-
-// Calcular score para artículos de GDELT
-function calculateGDELTScore(article: any, interests: string[], priority: number): number {
-    let score = 45; // Base score
-
-    score += (4 - priority) * 15;
-
-    if (article.publishedAt) {
-        const hoursAgo = (Date.now() - new Date(article.publishedAt).getTime()) / (1000 * 60 * 60);
-        if (hoursAgo < 3) score += 20;
-        else if (hoursAgo < 12) score += 15;
-        else if (hoursAgo < 24) score += 10;
-        else if (hoursAgo < 48) score += 5;
-    }
-
-    const titleLower = (article.title || '').toLowerCase();
-    const descLower = (article.description || '').toLowerCase();
-    interests.forEach(interest => {
-        const interestLower = interest.toLowerCase();
-        if (titleLower.includes(interestLower)) score += 10;
-        else if (descLower.includes(interestLower)) score += 5;
-    });
-
-    if (article.socialimage) score += 5;
-
-    return Math.min(score, 100);
+// Detectar si un interés es potencialmente un artista/banda
+function isPotentialArtist(interest: string): boolean {
+    const lower = interest.toLowerCase();
+    // Heurística simple: si contiene palabras clave de música o es una banda conocida
+    const musicKeywords = ['band', 'música', 'music', 'singer', 'cantante', 'artista'];
+    return musicKeywords.some(keyword => lower.includes(keyword));
 }
 
 // Mapear interés a categoría visual
@@ -375,20 +355,24 @@ function mapInterestToCategory(interest: string): string {
 function diversifyAndRank(items: ContentItem[], interests: string[]): ContentItem[] {
     const sorted = items.sort((a, b) => b.relevanceScore - a.relevanceScore);
 
-    const diversified: ContentItem[] = [];
+    // Los primeros 5 items SIEMPRE respetan el score estricto (para garantizar local)
+    // El resto se diversifica
+    const topPriority = sorted.slice(0, 5);
+    const rest = sorted.slice(5);
+
+    const diversified: ContentItem[] = [...topPriority];
     const categoryCount: Record<string, number> = {};
-    const MAX_CONSECUTIVE = 5;
+    const MAX_CONSECUTIVE = 3; // Reducimos a 3 para más mezcla en el resto
 
-    for (const item of sorted) {
+    for (const item of rest) {
         const cat = item.category;
-        categoryCount[cat] = (categoryCount[cat] || 0) + 1;
-
-        if (diversified.length > 0 && diversified.length % MAX_CONSECUTIVE === 0) {
-            Object.keys(categoryCount).forEach(key => {
-                categoryCount[key] = 0;
-            });
+        // Limitamos consecutivos
+        if ((categoryCount[cat] || 0) >= MAX_CONSECUTIVE) {
+            // Si ya hay muchos de esta categoría, intentamos ponerlo al final o saltarlo temporalmente (simple push for now)
+            // Para simplificar, lo añadimos igual pero el sort original ya ayudó
         }
 
+        categoryCount[cat] = (categoryCount[cat] || 0) + 1;
         diversified.push(item);
     }
 

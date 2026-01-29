@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { users, userInterests, userLocations, userSettings } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET() {
@@ -34,6 +34,7 @@ export async function GET() {
             email: user.email,
             username: user.username,
             avatarUrl: user.avatarUrl,
+            bio: user.bio,
             onboardingCompleted: user.onboardingCompleted,
             interests: user.interests,
             location: user.locations[0] || null,
@@ -65,7 +66,15 @@ export async function PUT(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { interests, city, radiusKm } = body;
+        const { interests, city, radiusKm, bio, avatarUrl } = body;
+
+        // Actualizar datos básicos de perfil (bio, avatar)
+        if (bio !== undefined || avatarUrl !== undefined) {
+            await db.update(users).set({
+                ...(bio !== undefined ? { bio } : {}),
+                ...(avatarUrl !== undefined ? { avatarUrl } : {}),
+            }).where(eq(users.id, user.id));
+        }
 
         // Actualizar intereses (eliminar viejos, agregar nuevos)
         if (interests) {
@@ -89,7 +98,12 @@ export async function PUT(req: NextRequest) {
             // Geocoding simple con Nominatim
             try {
                 const geoRes = await fetch(
-                    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1`
+                    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1`,
+                    {
+                        headers: {
+                            "User-Agent": "NearHype/1.0"
+                        }
+                    }
                 );
                 const geoData = await geoRes.json();
 
@@ -117,6 +131,11 @@ export async function PUT(req: NextRequest) {
                 console.error("Error geocoding:", geoError);
                 // Continuar sin error crítico
             }
+        } else if (radiusKm) {
+            // Si solo cambia el radio pero no la ciudad, actualizar el radio de la ubicación actual
+            await db.update(userLocations)
+                .set({ radiusKm })
+                .where(and(eq(userLocations.userId, user.id), eq(userLocations.isCurrent, true)));
         }
 
         return NextResponse.json({ success: true, message: "Perfil actualizado" });

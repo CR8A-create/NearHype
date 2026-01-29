@@ -2,8 +2,8 @@
 
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { users, userLocations, userInterests, communityMembers, profileSwipes, friendships } from "@/lib/db/schema";
-import { eq, and, or, isNull, notInArray, sql, ne } from "drizzle-orm";
+import { users, userLocations, userInterests, communityMembers, profileSwipes, friendships, friendRequests } from "@/lib/db/schema";
+import { eq, and, or, isNull, notInArray, sql, ne, inArray } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 // GET /api/discover/profiles - Obtener perfiles recomendados
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
         });
         const myInterestTopics = myInterests.map(i => i.topic.toLowerCase());
 
-        // IDs a excluir: usuario actual, ya swipeados, amigos
+        // IDs a excluir: usuario actual, ya swipeados, amigos, solicitudes pendientes
         const swipedProfiles = await db.query.profileSwipes.findMany({
             where: eq(profileSwipes.userId, currentUser.id),
             columns: { targetUserId: true },
@@ -54,7 +54,17 @@ export async function GET(req: NextRequest) {
             f.userId1 === currentUser.id ? f.userId2 : f.userId1
         );
 
-        const excludeIds = [currentUser.id, ...swipedIds, ...friendIds];
+        const pendingRequestsList = await db.query.friendRequests.findMany({
+            where: or(
+                eq(friendRequests.senderId, currentUser.id),
+                eq(friendRequests.receiverId, currentUser.id)
+            ),
+        });
+        const pendingIds = pendingRequestsList.map(r =>
+            r.senderId === currentUser.id ? r.receiverId : r.senderId
+        );
+
+        const excludeIds = [currentUser.id, ...swipedIds, ...friendIds, ...pendingIds];
 
         // Obtener candidatos (usuarios con perfil público o amigos)
         let candidatesQuery = db
@@ -146,7 +156,7 @@ export async function GET(req: NextRequest) {
                     const candidateCommunities = await db.query.communityMembers.findMany({
                         where: and(
                             eq(communityMembers.userId, candidate.id),
-                            sql`${communityMembers.communityId} = ANY(${myCommunityIds})`
+                            inArray(communityMembers.communityId, myCommunityIds)
                         ),
                     });
                     score += Math.min(candidateCommunities.length * 10, 30);

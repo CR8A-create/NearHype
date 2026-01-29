@@ -2,8 +2,8 @@
 
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { users, friendships, userLocations, communities, communityMembers } from "@/lib/db/schema";
-import { eq, or, and, sql } from "drizzle-orm";
+import { users, friendships, userLocations, communityMembers } from "@/lib/db/schema";
+import { eq, or, and } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 type Params = {
@@ -21,13 +21,19 @@ export async function GET(req: NextRequest, { params }: Params) {
         // Buscar el usuario por username
         const targetUser = await db.query.users.findFirst({
             where: eq(users.username, username),
+            with: {
+                interests: true,
+                locations: {
+                    where: (locations, { eq }) => eq(locations.isCurrent, true),
+                    limit: 1,
+                }
+            },
             columns: {
                 id: true,
                 username: true,
                 avatarUrl: true,
                 bio: true,
                 bannerUrl: true,
-                publicInterests: true,
                 profileVisibility: true,
                 showLocation: true,
                 createdAt: true,
@@ -39,12 +45,12 @@ export async function GET(req: NextRequest, { params }: Params) {
         }
 
         // Verificar permisos según visibilidad del perfil
-        let canViewFullProfile = true;
         let currentUserId: string | null = null;
 
         if (clerkId) {
             const currentUser = await db.query.users.findFirst({
                 where: eq(users.clerkId, clerkId),
+                columns: { id: true }
             });
             currentUserId = currentUser?.id || null;
         }
@@ -91,20 +97,11 @@ export async function GET(req: NextRequest, { params }: Params) {
         }
 
         // Obtener ubicación si showLocation está activado
-        let location = null;
-        if (targetUser.showLocation) {
-            const userLocation = await db.query.userLocations.findFirst({
-                where: and(
-                    eq(userLocations.userId, targetUser.id),
-                    eq(userLocations.isCurrent, true)
-                ),
-                columns: {
-                    city: true,
-                    countryCode: true,
-                },
-            });
-            location = userLocation;
-        }
+        // La ubicación ya viene en targetUser.locations[0] gracias al 'with' en la query principal
+        const location = targetUser.showLocation && targetUser.locations[0]
+            ? { city: targetUser.locations[0].city, countryCode: targetUser.locations[0].countryCode }
+            : null;
+
 
         // Contar amigos
         const friendsCount = await db.$count(

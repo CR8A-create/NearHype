@@ -3,6 +3,7 @@
 import { use, useEffect, useState, useRef } from "react";
 import { MapPin, Users, ArrowLeft, Plus, Loader2, ChevronUp, ChevronDown, MessageCircle, MoreVertical, Edit, Trash, Shield, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { uploadFiles } from "@/lib/uploadthing";
 import { useUser } from "@clerk/nextjs";
 import GlobalHeader from "@/components/GlobalHeader";
 import MembersPanel from "./components/MembersPanel";
@@ -394,6 +395,7 @@ function PostCard({ post, communitySlug, userRole }: { post: Post; communitySlug
     const [comments, setComments] = useState<any[]>([]);
     const [isLoadingComments, setIsLoadingComments] = useState(false);
     const [commentCount, setCommentCount] = useState(post.commentCount);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     useEffect(() => {
         // Load user's current vote
@@ -512,9 +514,20 @@ function PostCard({ post, communitySlug, userRole }: { post: Post; communitySlug
                         <PostOptionsMenu post={post} userRole={userRole} communitySlug={communitySlug} />
                     </div>
                     {post.content && (
-                        <p className="text-gray-400 text-sm mb-3 line-clamp-3">
-                            {post.content}
-                        </p>
+                        <div>
+                            <p className={`text-gray-400 text-sm mb-2 whitespace-pre-wrap ${!isExpanded ? 'line-clamp-3' : ''}`}>
+                                {post.content}
+                            </p>
+                            {post.content.length > 200 && (
+                                <button
+                                    onClick={() => setIsExpanded(!isExpanded)}
+                                    className="text-indigo-400 text-xs hover:text-indigo-300 font-medium mb-3 hover:underline"
+                                >
+                                    {isExpanded ? 'Leer menos' : 'Leer más'}
+                                </button>
+                            )}
+                            {!isExpanded && post.content.length <= 200 && <div className="mb-3"></div>}
+                        </div>
                     )}
                     {post.mediaUrl && post.contentType === 'image' && (
                         <img src={post.mediaUrl} alt="" className="rounded-lg max-h-96 object-cover mb-3" />
@@ -1195,12 +1208,48 @@ function CreatePostModal({
     const [postType, setPostType] = useState<'text' | 'image' | 'link'>('text');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
+    const [isUploading, setIsUploading] = useState(false);
     const [formData, setFormData] = useState({
         title: '',
         content: '',
         linkUrl: '',
         mediaUrl: '',
     });
+
+    const handlePaste = async (e: React.ClipboardEvent) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+
+        for (const item of items) {
+            if (item.type.indexOf('image') === 0) {
+                e.preventDefault();
+
+                const file = item.getAsFile();
+                if (!file) return;
+
+                // Switch to image type if not already
+                setPostType('image');
+                setIsUploading(true);
+                setError('');
+
+                try {
+                    const res = await uploadFiles("postImage", {
+                        files: [file],
+                    });
+
+                    if (res && res[0]) {
+                        setFormData(prev => ({ ...prev, mediaUrl: res[0].url }));
+                    }
+                } catch (err) {
+                    console.error("Error uploading pasted image:", err);
+                    setError("Error al subir la imagen pegada");
+                } finally {
+                    setIsUploading(false);
+                }
+                break; // Only handle first image
+            }
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -1328,21 +1377,25 @@ function CreatePostModal({
                         <p className="text-sm text-gray-500 mt-1">{formData.title.length}/300</p>
                     </div>
 
-                    {/* Content (for text posts) */}
-                    {postType === 'text' && (
+                    {/* Content (for text and image posts) */}
+                    {(postType === 'text' || postType === 'image') && (
                         <div>
                             <label className="block text-white font-semibold mb-2">
-                                Contenido
+                                {postType === 'image' ? 'Descripción' : 'Contenido'}
                             </label>
                             <textarea
                                 value={formData.content}
                                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                                placeholder="Escribe tu post aquí..."
-                                rows={8}
+                                onPaste={handlePaste}
+                                placeholder={postType === 'image' ? "Describe tu imagen... (o pega una imagen aquí)" : "Escribe tu post aquí... (puedes pegar imágenes)"}
+                                rows={postType === 'image' ? 4 : 8}
                                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                                 maxLength={5000}
                             />
-                            <p className="text-sm text-gray-500 mt-1">{formData.content.length}/5000</p>
+                            <p className="text-sm text-gray-500 mt-1 flex justify-between">
+                                <span>{formData.content.length}/5000</span>
+                                {isUploading && <span className="text-indigo-400 animate-pulse">Subiendo imagen pegada...</span>}
+                            </p>
                         </div>
                     )}
 

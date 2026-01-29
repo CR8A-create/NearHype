@@ -31,6 +31,14 @@ export const ourFileRouter = {
             return { userId: user.id };
         })
         .onUploadComplete(() => { }),
+    // Uploader para avatares de usuario
+    userAvatar: f({ image: { maxFileSize: "4MB", maxFileCount: 1 } })
+        .middleware(async () => {
+            const user = await currentUser();
+            if (!user) throw new Error("No autenticado");
+            return { userId: user.id };
+        })
+        .onUploadComplete(() => { }),
 } satisfies FileRouter;
 
 export type OurFileRouter = typeof ourFileRouter;

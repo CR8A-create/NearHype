@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
         });
 
         if (existingRequest) {
-            return NextResponse.json({ error: "Ya existe una solicitud pendiente" }, { status: 400 });
+            return NextResponse.json({ error: "Ya existe una solicitud pendiente", code: "ALREADY_PENDING" }, { status: 409 });
         }
 
         // Crear solicitud de amistad

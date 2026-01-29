@@ -52,3 +52,12 @@ export async function fetchLocalNews(city: string, interests: string[], limit: n
     const query = `${city} (${interests.slice(0, 3).join(' OR ')})`;
     return await fetchNewsAPI(query, 'es', limit);
 }
+
+// Buscar noticias globales por intereses (en Inglés para más volumen, como pidió el usuario)
+export async function fetchInterestNews(interests: string[], limit: number = 20): Promise<any[]> {
+    if (!ENABLE_NEWSAPI) return [];
+
+    // Query simple: "gaming OR tech OR music"
+    const query = interests.slice(0, 3).join(' OR ');
+    return await fetchNewsAPI(query, 'en', limit);
+}

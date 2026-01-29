@@ -5,9 +5,11 @@ import { UserPlus, Check, Clock, Loader2 } from "lucide-react";
 
 type AddFriendButtonProps = {
     username: string;
+    className?: string;
+    minimal?: boolean;
 };
 
-export default function AddFriendButton({ username }: AddFriendButtonProps) {
+export default function AddFriendButton({ username, className = "", minimal = false }: AddFriendButtonProps) {
     const [status, setStatus] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle');
 
     const handleSendRequest = async () => {
@@ -23,6 +25,9 @@ export default function AddFriendButton({ username }: AddFriendButtonProps) {
 
             if (res.ok) {
                 setStatus('sent');
+            } else if (res.status === 409) {
+                // Conflict: Already pending
+                setStatus('sent');
             } else {
                 console.error('Error:', data.error);
                 setStatus('error');
@@ -35,14 +40,18 @@ export default function AddFriendButton({ username }: AddFriendButtonProps) {
         }
     };
 
+    const baseClasses = minimal
+        ? className
+        : `flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-semibold ${className}`;
+
     if (status === 'sent') {
         return (
             <button
                 disabled
-                className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-gray-400 rounded-lg cursor-not-allowed"
+                className={`${baseClasses} opacity-50 cursor-not-allowed`}
             >
                 <Clock className="w-4 h-4" />
-                Solicitud Enviada
+                {minimal ? "Enviada" : "Solicitud Enviada"}
             </button>
         );
     }
@@ -51,10 +60,10 @@ export default function AddFriendButton({ username }: AddFriendButtonProps) {
         return (
             <button
                 disabled
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg cursor-wait"
+                className={`${baseClasses} cursor-wait`}
             >
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Enviando...
+                {minimal ? "Enviando" : "Enviando..."}
             </button>
         );
     }
@@ -62,10 +71,10 @@ export default function AddFriendButton({ username }: AddFriendButtonProps) {
     return (
         <button
             onClick={handleSendRequest}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-semibold"
+            className={baseClasses}
         >
             <UserPlus className="w-4 h-4" />
-            Agregar Amigo
+            {minimal ? "Agregar amigo" : "Agregar Amigo"}
         </button>
     );
 }

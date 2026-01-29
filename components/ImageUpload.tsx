@@ -7,7 +7,7 @@ import { useUploadThing } from "@/lib/uploadthing";
 type ImageUploadProps = {
     onUploadComplete: (url: string) => void;
     onUploadError?: (error: string) => void;
-    endpoint: "postImage" | "messageImage" | "communityAvatar";
+    endpoint: "postImage" | "messageImage" | "communityAvatar" | "userAvatar";
     maxSizeMB?: number;
 };
 

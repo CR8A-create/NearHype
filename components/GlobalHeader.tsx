@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin, Sparkles, Home, RefreshCcw, ArrowLeft, Settings, UserPlus, MessageCircle } from "lucide-react";
+import { MapPin, Sparkles, Home, RefreshCcw, ArrowLeft, Settings, UserPlus, MessageCircle, Users } from "lucide-react";
 import { UserButton, useUser } from "@clerk/nextjs";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import SettingsModal from "./SettingsModal";
 import NotificationBell from "./NotificationBell";
 import FriendRequestsModal from "./FriendRequestsModal";
@@ -14,9 +14,48 @@ export default function GlobalHeader() {
     const pathname = usePathname();
     const router = useRouter();
     const { user } = useUser();
-    const [showSettings, setShowSettings] = useState(false);
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
     const [showFriendRequests, setShowFriendRequests] = useState(false);
     const [showFriendsList, setShowFriendsList] = useState(true);
+
+    // Notification states
+    const [unreadMessages, setUnreadMessages] = useState(0);
+    const [pendingRequests, setPendingRequests] = useState(0);
+
+    // Audio for notifications
+    const playNotificationSound = () => {
+        try {
+            const audio = new Audio('/sounds/notification.mp3'); // We need to ensure this file exists or use a default
+            // Fallback simplistic beep if file doesn't exist or simple interaction
+            audio.play().catch(e => console.log('Audio play failed (interaction needed):', e));
+        } catch (e) {
+            console.error('Audio error', e);
+        }
+    };
+
+    const fetchStatus = async () => {
+        if (!user) return;
+        try {
+            const res = await fetch('/api/user/status');
+            const data = await res.json();
+
+            if (data.unreadMessages > unreadMessages || data.pendingRequests > pendingRequests) {
+                playNotificationSound();
+            }
+
+            setUnreadMessages(data.unreadMessages || 0);
+            setPendingRequests(data.pendingRequests || 0);
+        } catch (e) {
+            console.error('Error fetching status', e);
+        }
+    };
+
+    // Poll every 10 seconds
+    useEffect(() => {
+        fetchStatus(); // Initial fetch
+        const interval = setInterval(fetchStatus, 10000);
+        return () => clearInterval(interval);
+    }, [user, unreadMessages, pendingRequests]); // Deps allow sound check comparison
 
     const isActive = (path: string) => {
         if (path === '/feed' && (pathname === '/feed' || pathname === '/')) return true;
@@ -101,26 +140,21 @@ export default function GlobalHeader() {
                             {/* Mensajes */}
                             <Link
                                 href="/messages"
-                                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-semibold transition ${pathname === '/messages'
+                                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-semibold transition relative ${pathname === '/messages'
                                     ? 'bg-indigo-600/20 text-indigo-400'
                                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                                     }`}
                             >
                                 <MessageCircle className="w-5 h-5" />
                                 <span className="hidden sm:inline">Mensajes</span>
+                                {unreadMessages > 0 && (
+                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                                        {unreadMessages > 99 ? '99+' : unreadMessages}
+                                    </span>
+                                )}
                             </Link>
 
-                            {/* Descubrir */}
-                            <Link
-                                href="/discover/people"
-                                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-semibold transition ${pathname === '/discover/people'
-                                    ? 'bg-indigo-600/20 text-indigo-400'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                    }`}
-                            >
-                                <Sparkles className="w-5 h-5" />
-                                <span className="hidden sm:inline">Descubrir</span>
-                            </Link>
+
 
                             {/* Refrescar */}
                             <button
@@ -134,7 +168,7 @@ export default function GlobalHeader() {
 
                             {/* Configuración */}
                             <button
-                                onClick={() => setShowSettings(true)}
+                                onClick={() => setShowSettingsModal(true)}
                                 className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition"
                                 title="Configuración"
                             >
@@ -150,6 +184,11 @@ export default function GlobalHeader() {
                             >
                                 <UserPlus className="w-5 h-5" />
                                 <span className="hidden sm:inline">Amigos</span>
+                                {pendingRequests > 0 && (
+                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                                        {pendingRequests > 99 ? '99+' : pendingRequests}
+                                    </span>
+                                )}
                             </button>
 
                             {/* Notificaciones */}
@@ -173,8 +212,8 @@ export default function GlobalHeader() {
                 </div>
             </header>
 
-            {/* Modal de Configuración */}
-            {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+            {/* Modal de Configuración (Privada) */}
+            {showSettingsModal && <SettingsModal onClose={() => setShowSettingsModal(false)} />}
 
             {/* Modal de solicitudes de amistad */}
             {showFriendRequests && (

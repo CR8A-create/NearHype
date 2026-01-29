@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { Loader2, MapPin, Users, Calendar, Settings, MessageCircle } from "lucide-react";
+import { Loader2, MapPin, Users, Calendar, Settings, MessageCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import AddFriendButton from "@/components/AddFriendButton";
+import SimilarUsers from "./components/SimilarUsers";
 
 type UserProfile = {
     id: string;
@@ -13,7 +14,7 @@ type UserProfile = {
     avatarUrl?: string;
     bio?: string;
     bannerUrl?: string;
-    publicInterests?: string[];
+    interests: { id: string; topic: string }[];
     showLocation: boolean;
     createdAt: Date;
     location?: {
@@ -92,6 +93,12 @@ export default function UserProfilePage() {
                     backgroundPosition: 'center'
                 } : {}}
             >
+                <Link
+                    href="/feed"
+                    className="absolute top-4 left-4 p-2 bg-black/40 hover:bg-black/60 text-white rounded-full transition backdrop-blur-sm z-10"
+                >
+                    <ArrowLeft className="w-6 h-6" />
+                </Link>
                 {profile.isOwnProfile && (
                     <Link
                         href="/settings/profile"
@@ -182,20 +189,25 @@ export default function UserProfilePage() {
                 )}
 
                 {/* Interests */}
-                {profile.publicInterests && profile.publicInterests.length > 0 && (
-                    <div className="bg-gray-800 rounded-lg p-6">
+                {profile.interests && profile.interests.length > 0 && (
+                    <div className="bg-gray-800 rounded-lg p-6 mb-8">
                         <h2 className="text-xl font-bold text-white mb-3">Intereses</h2>
                         <div className="flex flex-wrap gap-2">
-                            {profile.publicInterests.map((interest, idx) => (
+                            {profile.interests.map((interest) => (
                                 <span
-                                    key={idx}
+                                    key={interest.id}
                                     className="px-3 py-1 bg-indigo-600/20 text-indigo-400 rounded-full text-sm"
                                 >
-                                    {interest}
+                                    {interest.topic}
                                 </span>
                             ))}
                         </div>
                     </div>
+                )}
+
+                {/* Similar Users Component */}
+                {!profile.isOwnProfile && (
+                    <SimilarUsers username={profile.username} />
                 )}
             </div>
         </div>

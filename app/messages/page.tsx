@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { MessageCircle, Loader2, Search } from "lucide-react";
+import { MessageCircle, Loader2, Search, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 import DMChat from "@/components/DMChat";
 
 type Conversation = {
@@ -40,13 +41,33 @@ export default function MessagesPage() {
 
     useEffect(() => {
         // Si hay parámetro user, buscar esa conversación o crearla
-        if (userParam && conversations.length > 0) {
-            const conv = conversations.find(c => c.otherUser.username === userParam);
-            if (conv) {
-                setSelectedConversation(conv);
+        const handleUserParam = async () => {
+            if (userParam && !isLoading) {
+                // Primero intentamos buscarla en local
+                const exisintgConv = conversations.find(c => c.otherUser.username === userParam);
+                if (exisintgConv) {
+                    setSelectedConversation(exisintgConv);
+                } else {
+                    // Si no existe, la creamos/obtenemos del servidor
+                    try {
+                        const res = await fetch('/api/dms', {
+                            method: 'POST',
+                            body: JSON.stringify({ targetUsername: userParam }),
+                        });
+                        const data = await res.json();
+                        if (res.ok && data.conversation) {
+                            setConversations(prev => [data.conversation, ...prev]);
+                            setSelectedConversation(data.conversation);
+                        }
+                    } catch (error) {
+                        console.error('Error creating conversation:', error);
+                    }
+                }
             }
-        }
-    }, [userParam, conversations]);
+        };
+
+        handleUserParam();
+    }, [userParam, isLoading]); // added isLoading dependency to wait for init load
 
     const getCurrentUserId = async () => {
         try {
@@ -82,10 +103,15 @@ export default function MessagesPage() {
             <div className="w-80 border-r border-white/10 flex flex-col">
                 {/* Header */}
                 <div className="p-4 border-b border-white/10">
-                    <h1 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-                        <MessageCircle className="w-6 h-6" />
-                        Mensajes
-                    </h1>
+                    <div className="flex items-center gap-3 mb-4">
+                        <Link href="/feed" className="p-2 hover:bg-white/10 rounded-full transition text-gray-400 hover:text-white">
+                            <ArrowLeft className="w-5 h-5" />
+                        </Link>
+                        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                            <MessageCircle className="w-6 h-6" />
+                            Mensajes
+                        </h1>
+                    </div>
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
                         <input

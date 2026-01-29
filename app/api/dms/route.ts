@@ -89,3 +89,76 @@ export async function GET(req: NextRequest) {
         );
     }
 }
+// POST /api/dms - Crear o obtener conversación con un usuario
+export async function POST(req: NextRequest) {
+    try {
+        const { userId: clerkId } = await auth();
+        const { targetUsername } = await req.json();
+
+        if (!clerkId) {
+            return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+        }
+
+        if (!targetUsername) {
+            return NextResponse.json({ error: "Username requerido" }, { status: 400 });
+        }
+
+        // 1. Obtener usuario actual
+        const currentUser = await db.query.users.findFirst({
+            where: eq(users.clerkId, clerkId),
+        });
+
+        if (!currentUser) return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
+
+        // 2. Obtener usuario objetivo
+        const targetUser = await db.query.users.findFirst({
+            where: eq(users.username, targetUsername),
+        });
+
+        if (!targetUser) return NextResponse.json({ error: "Usuario destino no encontrado" }, { status: 404 });
+
+        if (currentUser.id === targetUser.id) {
+            return NextResponse.json({ error: "No puedes chatear contigo mismo" }, { status: 400 });
+        }
+
+        // 3. Buscar conversación existente (comprobar ambos órdenes)
+        let conversation = await db.query.dmConversations.findFirst({
+            where: or(
+                and(eq(dmConversations.userId1, currentUser.id), eq(dmConversations.userId2, targetUser.id)),
+                and(eq(dmConversations.userId1, targetUser.id), eq(dmConversations.userId2, currentUser.id))
+            ),
+        });
+
+        // 4. Si no existe, crearla
+        if (!conversation) {
+            const [newConv] = await db.insert(dmConversations).values({
+                userId1: currentUser.id, // Podríamos ordenar IDs aquí para consistencia
+                userId2: targetUser.id,
+                lastMessageAt: new Date(),
+            }).returning();
+            conversation = newConv;
+        }
+
+        // 5. Devolver formato consistente con GET
+        return NextResponse.json({
+            conversation: {
+                id: conversation.id,
+                otherUser: {
+                    id: targetUser.id,
+                    username: targetUser.username,
+                    avatarUrl: targetUser.avatarUrl,
+                },
+                lastMessage: null, // Si es nueva, null. Si existía, se podría buscar, pero para abrir chat basta así.
+                unreadCount: 0,
+                lastMessageAt: conversation.lastMessageAt,
+            }
+        });
+
+    } catch (error) {
+        console.error('Error creating DM conversation:', error);
+        return NextResponse.json(
+            { error: "Error al crear conversación" },
+            { status: 500 }
+        );
+    }
+}
