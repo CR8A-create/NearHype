@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin, Sparkles, Home, RefreshCcw, ArrowLeft, Settings, UserPlus, MessageCircle } from "lucide-react";
+import { MapPin, Sparkles, Home, RefreshCcw, ArrowLeft, Settings, UserPlus, MessageCircle, Menu, X } from "lucide-react";
 import { UserButton, useUser } from "@clerk/nextjs";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import SettingsModal from "./SettingsModal";
 import NotificationBell from "./NotificationBell";
 import FriendRequestsModal from "./FriendRequestsModal";
@@ -14,9 +14,53 @@ export default function GlobalHeader() {
     const pathname = usePathname();
     const router = useRouter();
     const { user } = useUser();
-    const [showSettings, setShowSettings] = useState(false);
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
     const [showFriendRequests, setShowFriendRequests] = useState(false);
-    const [showFriendsList, setShowFriendsList] = useState(true);
+    const [showFriendsList, setShowFriendsList] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+    // Notification states
+    const [unreadMessages, setUnreadMessages] = useState(0);
+    const [pendingRequests, setPendingRequests] = useState(0);
+
+    // Audio for notifications
+    const playNotificationSound = () => {
+        try {
+            const audio = new Audio('/sounds/notification.mp3');
+            audio.play().catch(e => console.log('Audio play failed (interaction needed):', e));
+        } catch (e) {
+            console.error('Audio error', e);
+        }
+    };
+
+    const fetchStatus = async () => {
+        if (!user) return;
+        try {
+            const res = await fetch('/api/user/status');
+            const data = await res.json();
+
+            if (data.unreadMessages > unreadMessages || data.pendingRequests > pendingRequests) {
+                playNotificationSound();
+            }
+
+            setUnreadMessages(data.unreadMessages || 0);
+            setPendingRequests(data.pendingRequests || 0);
+        } catch (e) {
+            console.error('Error fetching status', e);
+        }
+    };
+
+    // Poll every 10 seconds
+    useEffect(() => {
+        fetchStatus();
+        const interval = setInterval(fetchStatus, 10000);
+        return () => clearInterval(interval);
+    }, [user, unreadMessages, pendingRequests]);
+
+    // Close mobile menu on route change
+    useEffect(() => {
+        setMobileMenuOpen(false);
+    }, [pathname]);
 
     const isActive = (path: string) => {
         if (path === '/feed' && (pathname === '/feed' || pathname === '/')) return true;
@@ -29,8 +73,17 @@ export default function GlobalHeader() {
         window.location.reload();
     };
 
-    // Detectar si estamos en una comunidad específica (no en la lista de comunidades)
     const isInSpecificCommunity = pathname.match(/^\/communities\/[^\/]+$/);
+
+    // Shared nav link style helper
+    const navLinkClass = (path: string, isMobile = false) =>
+        `flex items-center gap-3 ${isMobile ? 'px-4 py-3 w-full' : 'px-3 sm:px-4 py-2'} rounded-lg font-semibold transition ${isActive(path)
+            ? 'bg-indigo-600/20 text-indigo-400'
+            : 'text-gray-400 hover:text-white hover:bg-white/5'
+        }`;
+
+    const navButtonClass = (isMobile = false) =>
+        `flex items-center gap-3 ${isMobile ? 'px-4 py-3 w-full' : 'px-3 sm:px-4 py-2'} rounded-lg font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition`;
 
     return (
         <>
@@ -58,104 +111,54 @@ export default function GlobalHeader() {
                             </Link>
                         </div>
 
-                        {/* Navigation */}
-                        <nav className="flex items-center gap-1 sm:gap-2">
-                            {/* Descubrir */}
-                            <Link
-                                href="/discover"
-                                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-semibold transition ${isActive('/discover')
-                                    ? 'bg-indigo-600/20 text-indigo-400'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                    }`}
-                            >
+                        {/* Desktop Navigation - hidden on mobile */}
+                        <nav className="hidden md:flex items-center gap-1 sm:gap-2">
+                            <Link href="/discover" className={navLinkClass('/discover')}>
                                 <Sparkles className="w-5 h-5" />
-                                <span className="hidden sm:inline">Descubrir</span>
+                                <span className="hidden lg:inline">Descubrir</span>
                             </Link>
 
-                            {/* Feed */}
-                            <Link
-                                href="/feed"
-                                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-semibold transition ${isActive('/feed')
-                                    ? 'bg-indigo-600/20 text-indigo-400'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                    }`}
-                            >
+                            <Link href="/feed" className={navLinkClass('/feed')}>
                                 <Home className="w-5 h-5" />
-                                <span className="hidden sm:inline">Feed</span>
+                                <span className="hidden lg:inline">Feed</span>
                             </Link>
 
-                            {/* Comunidades */}
-                            <Link
-                                href="/communities"
-                                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-semibold transition ${isActive('/communities')
-                                    ? 'bg-indigo-600/20 text-indigo-400'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                    }`}
-                            >
+                            <Link href="/communities" className={navLinkClass('/communities')}>
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                                 </svg>
-                                <span className="hidden sm:inline">Comunidades</span>
+                                <span className="hidden lg:inline">Comunidades</span>
                             </Link>
 
-                            {/* Mensajes */}
-                            <Link
-                                href="/messages"
-                                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-semibold transition ${pathname === '/messages'
-                                    ? 'bg-indigo-600/20 text-indigo-400'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                    }`}
-                            >
+                            <Link href="/messages" className={`${navLinkClass('/messages')} relative`}>
                                 <MessageCircle className="w-5 h-5" />
-                                <span className="hidden sm:inline">Mensajes</span>
+                                <span className="hidden lg:inline">Mensajes</span>
+                                {unreadMessages > 0 && (
+                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                                        {unreadMessages > 99 ? '99+' : unreadMessages}
+                                    </span>
+                                )}
                             </Link>
 
-                            {/* Descubrir */}
-                            <Link
-                                href="/discover/people"
-                                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-semibold transition ${pathname === '/discover/people'
-                                    ? 'bg-indigo-600/20 text-indigo-400'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                    }`}
-                            >
-                                <Sparkles className="w-5 h-5" />
-                                <span className="hidden sm:inline">Descubrir</span>
-                            </Link>
-
-                            {/* Refrescar */}
-                            <button
-                                onClick={handleRefresh}
-                                className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition"
-                                title="Refrescar"
-                            >
+                            <button onClick={handleRefresh} className={navButtonClass()} title="Refrescar">
                                 <RefreshCcw className="w-5 h-5" />
-                                <span className="hidden sm:inline">Refrescar</span>
                             </button>
 
-                            {/* Configuración */}
-                            <button
-                                onClick={() => setShowSettings(true)}
-                                className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition"
-                                title="Configuración"
-                            >
+                            <button onClick={() => setShowSettingsModal(true)} className={navButtonClass()} title="Configuración">
                                 <Settings className="w-5 h-5" />
-                                <span className="hidden sm:inline">Config</span>
                             </button>
 
-                            {/* Solicitudes de amistad */}
-                            <button
-                                onClick={() => setShowFriendRequests(true)}
-                                className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition relative"
-                                title="Solicitudes de amistad"
-                            >
+                            <button onClick={() => setShowFriendRequests(true)} className={`${navButtonClass()} relative`} title="Solicitudes de amistad">
                                 <UserPlus className="w-5 h-5" />
-                                <span className="hidden sm:inline">Amigos</span>
+                                {pendingRequests > 0 && (
+                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                                        {pendingRequests > 99 ? '99+' : pendingRequests}
+                                    </span>
+                                )}
                             </button>
 
-                            {/* Notificaciones */}
                             <NotificationBell />
 
-                            {/* User Button (con configuración integrada) */}
                             {user && (
                                 <div className="ml-2">
                                     <UserButton
@@ -169,12 +172,92 @@ export default function GlobalHeader() {
                                 </div>
                             )}
                         </nav>
+
+                        {/* Mobile: key actions + hamburger */}
+                        <div className="flex md:hidden items-center gap-2">
+                            <NotificationBell />
+                            {user && (
+                                <UserButton
+                                    appearance={{
+                                        elements: {
+                                            avatarBox: "w-8 h-8 ring-2 ring-indigo-500/30",
+                                        },
+                                    }}
+                                    afterSignOutUrl="/"
+                                />
+                            )}
+                            <button
+                                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                                className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition relative"
+                            >
+                                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                                {(unreadMessages > 0 || pendingRequests > 0) && !mobileMenuOpen && (
+                                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
+
+                {/* Mobile dropdown menu */}
+                {mobileMenuOpen && (
+                    <div className="md:hidden border-t border-white/10 bg-gray-900/98 backdrop-blur-lg animate-in slide-in-from-top-2 duration-200">
+                        <div className="container mx-auto px-2 py-2 flex flex-col gap-1">
+                            <Link href="/feed" className={navLinkClass('/feed', true)}>
+                                <Home className="w-5 h-5" />
+                                Feed
+                            </Link>
+
+                            <Link href="/discover" className={navLinkClass('/discover', true)}>
+                                <Sparkles className="w-5 h-5" />
+                                Descubrir
+                            </Link>
+
+                            <Link href="/communities" className={navLinkClass('/communities', true)}>
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                                Comunidades
+                            </Link>
+
+                            <Link href="/messages" className={`${navLinkClass('/messages', true)} relative`}>
+                                <MessageCircle className="w-5 h-5" />
+                                Mensajes
+                                {unreadMessages > 0 && (
+                                    <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5">
+                                        {unreadMessages > 99 ? '99+' : unreadMessages}
+                                    </span>
+                                )}
+                            </Link>
+
+                            <div className="border-t border-white/10 my-1" />
+
+                            <button onClick={() => { setShowFriendRequests(true); setMobileMenuOpen(false); }} className={`${navButtonClass(true)} relative`}>
+                                <UserPlus className="w-5 h-5" />
+                                Amigos
+                                {pendingRequests > 0 && (
+                                    <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5">
+                                        {pendingRequests > 99 ? '99+' : pendingRequests}
+                                    </span>
+                                )}
+                            </button>
+
+                            <button onClick={() => { setShowSettingsModal(true); setMobileMenuOpen(false); }} className={navButtonClass(true)}>
+                                <Settings className="w-5 h-5" />
+                                Configuración
+                            </button>
+
+                            <button onClick={handleRefresh} className={navButtonClass(true)}>
+                                <RefreshCcw className="w-5 h-5" />
+                                Refrescar
+                            </button>
+                        </div>
+                    </div>
+                )}
             </header>
 
             {/* Modal de Configuración */}
-            {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+            {showSettingsModal && <SettingsModal onClose={() => setShowSettingsModal(false)} />}
 
             {/* Modal de solicitudes de amistad */}
             {showFriendRequests && (
@@ -183,8 +266,12 @@ export default function GlobalHeader() {
                 />
             )}
 
-            {/* Sidebar de amigos */}
-            {showFriendsList && <FriendsList />}
+            {/* Sidebar de amigos - solo desktop */}
+            {showFriendsList && (
+                <div className="hidden md:block">
+                    <FriendsList />
+                </div>
+            )}
         </>
     );
 }

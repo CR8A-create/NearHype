@@ -84,7 +84,7 @@ export default function MembersPanel({ communitySlug, isCollapsed, onToggle }: M
     }
 
     return (
-        <div className="fixed right-0 top-20 bottom-0 w-80 bg-gray-900/95 backdrop-blur-lg border-l border-white/10 z-40 overflow-y-auto">
+        <div className="fixed right-0 top-20 bottom-0 w-full md:w-80 bg-gray-900/95 backdrop-blur-lg border-l border-white/10 z-40 overflow-y-auto">
             {/* Header */}
             <div className="sticky top-0 bg-gray-900 border-b border-white/10 p-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
