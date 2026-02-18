@@ -2,7 +2,7 @@
 
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { users, friendships } from "@/lib/db/schema";
+import { users, friendships, dmConversations } from "@/lib/db/schema";
 import { eq, or, and } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -61,6 +61,24 @@ export async function DELETE(req: NextRequest, { params }: Params) {
         await db
             .delete(friendships)
             .where(eq(friendships.id, friendship.id));
+
+        // También eliminar la conversación DM entre ambos usuarios
+        // (los mensajes se eliminan en cascada automáticamente)
+        const sortedId1 = user.id < friendId ? user.id : friendId;
+        const sortedId2 = user.id < friendId ? friendId : user.id;
+
+        const conversation = await db.query.dmConversations.findFirst({
+            where: and(
+                eq(dmConversations.userId1, sortedId1),
+                eq(dmConversations.userId2, sortedId2)
+            ),
+        });
+
+        if (conversation) {
+            await db
+                .delete(dmConversations)
+                .where(eq(dmConversations.id, conversation.id));
+        }
 
         return NextResponse.json({
             success: true,

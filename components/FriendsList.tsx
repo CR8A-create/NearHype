@@ -87,7 +87,7 @@ export default function FriendsList() {
     }
 
     return (
-        <div className="fixed right-0 top-16 h-[calc(100vh-4rem)] w-80 bg-gray-900 border-l border-white/10 shadow-xl z-40 flex flex-col">
+        <div className="fixed right-0 top-16 h-[calc(100vh-4rem)] w-full md:w-80 bg-gray-900 border-l border-white/10 shadow-xl z-40 flex flex-col">
             {/* Header */}
             <div className="p-4 border-b border-white/10 flex items-center justify-between">
                 <div className="flex items-center gap-2">

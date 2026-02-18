@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { MessageCircle, Loader2, Search, ArrowLeft } from "lucide-react";
-import Link from "next/link";
 import DMChat from "@/components/DMChat";
 
 type Conversation = {
@@ -23,7 +22,7 @@ type Conversation = {
     lastMessageAt: Date;
 };
 
-function MessagesContent() {
+export default function MessagesPage() {
     const { user: clerkUser } = useUser();
     const searchParams = useSearchParams();
     const userParam = searchParams?.get('user');
@@ -37,37 +36,23 @@ function MessagesContent() {
     useEffect(() => {
         loadConversations();
         getCurrentUserId();
+        // Poll conversations every 5s to update last message and unread counts
+        const interval = setInterval(loadConversations, 5000);
+        return () => clearInterval(interval);
     }, []);
 
     useEffect(() => {
         // Si hay parámetro user, buscar esa conversación o crearla
-        const handleUserParam = async () => {
-            if (userParam && !isLoading) {
-                // Primero intentamos buscarla en local
-                const exisintgConv = conversations.find(c => c.otherUser.username === userParam);
-                if (exisintgConv) {
-                    setSelectedConversation(exisintgConv);
-                } else {
-                    // Si no existe, la creamos/obtenemos del servidor
-                    try {
-                        const res = await fetch('/api/dms', {
-                            method: 'POST',
-                            body: JSON.stringify({ targetUsername: userParam }),
-                        });
-                        const data = await res.json();
-                        if (res.ok && data.conversation) {
-                            setConversations(prev => [data.conversation, ...prev]);
-                            setSelectedConversation(data.conversation);
-                        }
-                    } catch (error) {
-                        console.error('Error creating conversation:', error);
-                    }
-                }
+        if (userParam && !isLoading) {
+            const conv = conversations.find(c => c.otherUser.username === userParam);
+            if (conv) {
+                setSelectedConversation(conv);
+            } else {
+                // No hay conversación existente → crear una temporal buscando al usuario
+                createTemporaryConversation(userParam);
             }
-        };
-
-        handleUserParam();
-    }, [userParam, isLoading]); // added isLoading dependency to wait for init load
+        }
+    }, [userParam, conversations, isLoading]);
 
     const getCurrentUserId = async () => {
         try {
@@ -93,25 +78,46 @@ function MessagesContent() {
         }
     };
 
+    const createTemporaryConversation = async (username: string) => {
+        try {
+            const res = await fetch(`/api/users?username=${encodeURIComponent(username)}`);
+            const data = await res.json();
+
+            if (data.user) {
+                // Crear conversación temporal (sin ID real — se creará al enviar el primer mensaje)
+                const tempConv: Conversation = {
+                    id: `temp-${data.user.id}`,
+                    otherUser: {
+                        id: data.user.id,
+                        username: data.user.username,
+                        avatarUrl: data.user.avatarUrl,
+                    },
+                    lastMessage: null,
+                    unreadCount: 0,
+                    lastMessageAt: new Date(),
+                };
+                setSelectedConversation(tempConv);
+            }
+        } catch (error) {
+            console.error('Error creating temporary conversation:', error);
+        }
+    };
+
     const filteredConversations = conversations.filter(conv =>
         conv.otherUser.username.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     return (
-        <div className="h-screen bg-gray-900 flex">
+        <div className="h-screen bg-gray-900 flex flex-col md:flex-row">
             {/* Sidebar - Lista de conversaciones */}
-            <div className="w-80 border-r border-white/10 flex flex-col">
+            {/* On mobile: hidden when a conversation is selected */}
+            <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} w-full md:w-80 border-r border-white/10 flex-col flex-shrink-0`}>
                 {/* Header */}
                 <div className="p-4 border-b border-white/10">
-                    <div className="flex items-center gap-3 mb-4">
-                        <Link href="/feed" className="p-2 hover:bg-white/10 rounded-full transition text-gray-400 hover:text-white">
-                            <ArrowLeft className="w-5 h-5" />
-                        </Link>
-                        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                            <MessageCircle className="w-6 h-6" />
-                            Mensajes
-                        </h1>
-                    </div>
+                    <h1 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+                        <MessageCircle className="w-6 h-6" />
+                        Mensajes
+                    </h1>
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
                         <input
@@ -193,14 +199,36 @@ function MessagesContent() {
             </div>
 
             {/* Área de chat */}
+            {/* On mobile: shown fullscreen when conversation selected */}
             {selectedConversation ? (
-                <DMChat
-                    conversationId={selectedConversation.id}
-                    otherUser={selectedConversation.otherUser}
-                    currentUserId={currentUserId}
-                />
+                <div className="flex-1 flex flex-col min-h-0">
+                    {/* Mobile back button */}
+                    <div className="md:hidden flex items-center gap-3 p-3 border-b border-white/10 bg-gray-900">
+                        <button
+                            onClick={() => setSelectedConversation(null)}
+                            className="p-2 hover:bg-white/10 rounded-full transition text-gray-400 hover:text-white"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                        </button>
+                        <div className="flex items-center gap-2">
+                            {selectedConversation.otherUser.avatarUrl ? (
+                                <img src={selectedConversation.otherUser.avatarUrl} alt="" className="w-8 h-8 rounded-full" />
+                            ) : (
+                                <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                                    {selectedConversation.otherUser.username[0].toUpperCase()}
+                                </div>
+                            )}
+                            <span className="text-white font-semibold">{selectedConversation.otherUser.username}</span>
+                        </div>
+                    </div>
+                    <DMChat
+                        conversationId={selectedConversation.id}
+                        otherUser={selectedConversation.otherUser}
+                        currentUserId={currentUserId}
+                    />
+                </div>
             ) : (
-                <div className="flex-1 flex items-center justify-center bg-gray-900">
+                <div className="hidden md:flex flex-1 items-center justify-center bg-gray-900">
                     <div className="text-center">
                         <MessageCircle className="w-16 h-16 text-gray-600 mx-auto mb-4" />
                         <p className="text-gray-500">
@@ -210,17 +238,5 @@ function MessagesContent() {
                 </div>
             )}
         </div>
-    );
-}
-
-export default function MessagesPage() {
-    return (
-        <Suspense fallback={
-            <div className="h-screen bg-gray-900 flex items-center justify-center">
-                <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
-            </div>
-        }>
-            <MessagesContent />
-        </Suspense>
     );
 }

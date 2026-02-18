@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Send, Loader2, Image as ImageIcon, X } from "lucide-react";
 
 type Message = {
@@ -27,10 +27,21 @@ export default function DMChat({ conversationId, otherUser, currentUserId }: DMC
     const [isLoading, setIsLoading] = useState(true);
     const [isSending, setIsSending] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
+    const isNearBottomRef = useRef(true);
+
+    // Track if user is scrolled near bottom to auto-scroll on new messages
+    const checkIfNearBottom = useCallback(() => {
+        const container = messagesContainerRef.current;
+        if (!container) return;
+        const threshold = 100; // px from bottom
+        isNearBottomRef.current =
+            container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+    }, []);
 
     useEffect(() => {
         loadMessages();
-        const interval = setInterval(loadMessages, 3000); // Poll cada 3s
+        const interval = setInterval(loadMessages, 2000); // Poll cada 2s
         return () => clearInterval(interval);
     }, [otherUser.id]);
 
@@ -39,8 +50,19 @@ export default function DMChat({ conversationId, otherUser, currentUserId }: DMC
             const res = await fetch(`/api/dms/${otherUser.id}`);
             const data = await res.json();
             if (data.messages) {
-                setMessages(data.messages);
-                scrollToBottom();
+                setMessages(prev => {
+                    // Solo actualizar si hay cambios reales
+                    if (prev.length !== data.messages.length ||
+                        (prev.length > 0 && data.messages.length > 0 &&
+                            prev[prev.length - 1].id !== data.messages[data.messages.length - 1].id)) {
+                        // Auto-scroll solo si el usuario está cerca del final
+                        if (isNearBottomRef.current) {
+                            setTimeout(scrollToBottom, 50);
+                        }
+                        return data.messages;
+                    }
+                    return prev;
+                });
             }
         } catch (error) {
             console.error('Error loading messages:', error);
@@ -53,24 +75,53 @@ export default function DMChat({ conversationId, otherUser, currentUserId }: DMC
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
+    // Initial scroll to bottom
+    useEffect(() => {
+        if (!isLoading && messages.length > 0) {
+            messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+        }
+    }, [isLoading]);
+
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newMessage.trim() || isSending) return;
+
+        const messageContent = newMessage.trim();
+        setNewMessage("");
+
+        // Optimistic UI: añadir mensaje localmente de inmediato
+        const tempId = `temp-${Date.now()}`;
+        const optimisticMessage: Message = {
+            id: tempId,
+            senderId: currentUserId,
+            content: messageContent,
+            createdAt: new Date(),
+        };
+
+        setMessages(prev => [...prev, optimisticMessage]);
+        setTimeout(scrollToBottom, 50);
 
         setIsSending(true);
         try {
             const res = await fetch(`/api/dms/${otherUser.id}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: newMessage }),
+                body: JSON.stringify({ content: messageContent }),
             });
 
             if (res.ok) {
-                setNewMessage("");
+                // Recargar mensajes del server para obtener el ID real
                 await loadMessages();
+            } else {
+                // Rollback: eliminar el mensaje optimístico si falló
+                setMessages(prev => prev.filter(m => m.id !== tempId));
+                setNewMessage(messageContent); // Devolver el texto al input
             }
         } catch (error) {
             console.error('Error sending message:', error);
+            // Rollback
+            setMessages(prev => prev.filter(m => m.id !== tempId));
+            setNewMessage(messageContent);
         } finally {
             setIsSending(false);
         }
@@ -108,7 +159,11 @@ export default function DMChat({ conversationId, otherUser, currentUserId }: DMC
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div
+                ref={messagesContainerRef}
+                onScroll={checkIfNearBottom}
+                className="flex-1 overflow-y-auto p-4 space-y-4"
+            >
                 {messages.length === 0 ? (
                     <div className="text-center text-gray-500 mt-8">
                         No hay mensajes aún. ¡Envía el primero!
@@ -123,7 +178,7 @@ export default function DMChat({ conversationId, otherUser, currentUserId }: DMC
                                 className={`max-w-[70%] rounded-lg p-3 ${message.senderId === currentUserId
                                     ? 'bg-indigo-600 text-white'
                                     : 'bg-gray-800 text-white'
-                                    }`}
+                                    } ${message.id.startsWith('temp-') ? 'opacity-70' : ''}`}
                             >
                                 <p className="whitespace-pre-wrap break-words">{message.content}</p>
                                 {message.mediaUrl && (
@@ -134,10 +189,12 @@ export default function DMChat({ conversationId, otherUser, currentUserId }: DMC
                                     />
                                 )}
                                 <p className="text-xs mt-1 opacity-70">
-                                    {new Date(message.createdAt).toLocaleTimeString('es-ES', {
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                    })}
+                                    {message.id.startsWith('temp-') ? 'Enviando...' :
+                                        new Date(message.createdAt).toLocaleTimeString('es-ES', {
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        })
+                                    }
                                 </p>
                             </div>
                         </div>
