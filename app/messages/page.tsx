@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { MessageCircle, Loader2, Search, ArrowLeft } from "lucide-react";
@@ -22,7 +22,19 @@ type Conversation = {
     lastMessageAt: Date;
 };
 
-export default function MessagesPage() {
+export default function MessagesPageWrapper() {
+    return (
+        <Suspense fallback={
+            <div className="h-screen bg-gray-900 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+            </div>
+        }>
+            <MessagesPage />
+        </Suspense>
+    );
+}
+
+function MessagesPage() {
     const { user: clerkUser } = useUser();
     const searchParams = useSearchParams();
     const userParam = searchParams?.get('user');
