@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { MessageCircle, Loader2, Search } from "lucide-react";
+import { MessageCircle, Loader2, Search, ArrowLeft } from "lucide-react";
 import DMChat from "@/components/DMChat";
 
 type Conversation = {
@@ -36,17 +36,23 @@ export default function MessagesPage() {
     useEffect(() => {
         loadConversations();
         getCurrentUserId();
+        // Poll conversations every 5s to update last message and unread counts
+        const interval = setInterval(loadConversations, 5000);
+        return () => clearInterval(interval);
     }, []);
 
     useEffect(() => {
         // Si hay parámetro user, buscar esa conversación o crearla
-        if (userParam && conversations.length > 0) {
+        if (userParam && !isLoading) {
             const conv = conversations.find(c => c.otherUser.username === userParam);
             if (conv) {
                 setSelectedConversation(conv);
+            } else {
+                // No hay conversación existente → crear una temporal buscando al usuario
+                createTemporaryConversation(userParam);
             }
         }
-    }, [userParam, conversations]);
+    }, [userParam, conversations, isLoading]);
 
     const getCurrentUserId = async () => {
         try {
@@ -69,6 +75,31 @@ export default function MessagesPage() {
             console.error('Error loading conversations:', error);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const createTemporaryConversation = async (username: string) => {
+        try {
+            const res = await fetch(`/api/users?username=${encodeURIComponent(username)}`);
+            const data = await res.json();
+
+            if (data.user) {
+                // Crear conversación temporal (sin ID real — se creará al enviar el primer mensaje)
+                const tempConv: Conversation = {
+                    id: `temp-${data.user.id}`,
+                    otherUser: {
+                        id: data.user.id,
+                        username: data.user.username,
+                        avatarUrl: data.user.avatarUrl,
+                    },
+                    lastMessage: null,
+                    unreadCount: 0,
+                    lastMessageAt: new Date(),
+                };
+                setSelectedConversation(tempConv);
+            }
+        } catch (error) {
+            console.error('Error creating temporary conversation:', error);
         }
     };
 

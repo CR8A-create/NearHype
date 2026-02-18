@@ -79,7 +79,20 @@ export async function GET() {
 
         const communityIds = relevantCommunities.map(c => c.id);
 
-        let allPosts = [];
+        let allPosts: {
+            id: string;
+            title: string;
+            content: string | null;
+            upvotes: number | null;
+            downvotes: number | null;
+            commentCount: number | null;
+            createdAt: Date | null;
+            communityName: string;
+            communitySlug: string;
+            category: string | null;
+            authorUsername: string;
+            authorAvatarUrl: string | null;
+        }[] = [];
 
         if (communityIds.length > 0) {
             // Obtener posts de comunidades relevantes
@@ -134,7 +147,8 @@ export async function GET() {
 
         // Ordenar por algoritmo: upvotes con algo de randomización
         const scoredPosts = allPosts.map(post => {
-            const score = post.upvotes * (1 + Math.log(1 + post.upvotes)) + Math.random() * 5;
+            const upvotes = post.upvotes ?? 0;
+            const score = upvotes * (1 + Math.log(1 + upvotes)) + Math.random() * 5;
             return { ...post, score };
         });
 

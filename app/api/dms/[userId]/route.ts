@@ -2,7 +2,7 @@
 
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { users, dmConversations, dmMessages, friendships } from "@/lib/db/schema";
+import { users, dmConversations, dmMessages, friendships, notifications } from "@/lib/db/schema";
 import { eq, or, and, isNull, desc } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -195,8 +195,20 @@ export async function POST(req: NextRequest, { params }: Params) {
             .set({ lastMessageAt: new Date() })
             .where(eq(dmConversations.id, conversation.id));
 
-        // TODO: Crear notificación para el receptor
-        // await createNotification(...)
+        // Crear notificación para el receptor
+        await db.insert(notifications).values({
+            userId: otherUserId,
+            type: 'new_message',
+            title: 'Nuevo mensaje',
+            message: `${currentUser.username}: ${content.trim().substring(0, 100)}${content.trim().length > 100 ? '...' : ''}`,
+            linkUrl: `/messages?user=${currentUser.username}`,
+            metadata: {
+                fromUserId: currentUser.id,
+                fromUsername: currentUser.username,
+                fromAvatarUrl: currentUser.avatarUrl || undefined,
+                messageId: message.id,
+            },
+        });
 
         return NextResponse.json({
             success: true,
