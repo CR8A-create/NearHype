@@ -59,7 +59,7 @@ export default function DMChat({ conversationId, otherUser, currentUserId }: DMC
 
     useEffect(() => {
         loadMessages();
-        const interval = setInterval(loadMessages, 2000); // Poll cada 2s
+        const interval = setInterval(loadMessages, 5000); // Poll cada 5s (reducido para evitar rate limits)
         return () => clearInterval(interval);
     }, [otherUser.id]);
 
@@ -205,37 +205,62 @@ export default function DMChat({ conversationId, otherUser, currentUserId }: DMC
                         No hay mensajes aún. ¡Envía el primero!
                     </div>
                 ) : (
-                    messages.map((message) => (
-                        <div
-                            key={message.id}
-                            className={`flex ${message.senderId === currentUserId ? 'justify-end' : 'justify-start'}`}
-                        >
+                    messages.map((message) => {
+                        // Mensajes de llamada como evento de sistema
+                        if (message.content.startsWith("[CALL] ")) {
+                            const callText = message.content.replace("[CALL] ", "");
+                            return (
+                                <div key={message.id} className="flex justify-center my-2">
+                                    <div className="bg-gray-800/50 border border-white/5 rounded-full px-4 py-1.5 text-xs text-gray-400 flex items-center gap-2">
+                                        {callText.includes("Video") ? (
+                                            <Video className="w-3 h-3" />
+                                        ) : (
+                                            <Phone className="w-3 h-3" />
+                                        )}
+                                        <span>{callText}</span>
+                                        <span className="opacity-50">
+                                            {new Date(message.createdAt).toLocaleTimeString('es-ES', {
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })}
+                                        </span>
+                                    </div>
+                                </div>
+                            );
+                        }
+
+                        return (
                             <div
-                                className={`max-w-[70%] rounded-lg p-3 ${message.senderId !== currentUserId
-                                    ? 'bg-gray-800 text-white'
-                                    : 'text-white'
-                                    } ${message.id.startsWith('temp-') ? 'opacity-70' : ''}`}
-                                style={message.senderId === currentUserId ? { backgroundColor: 'var(--accent)' } : undefined}
+                                key={message.id}
+                                className={`flex ${message.senderId === currentUserId ? 'justify-end' : 'justify-start'}`}
                             >
-                                <p className="whitespace-pre-wrap break-words">{message.content}</p>
-                                {message.mediaUrl && (
-                                    <img
-                                        src={message.mediaUrl}
-                                        alt="Media"
-                                        className="mt-2 rounded max-w-full"
-                                    />
-                                )}
-                                <p className="text-xs mt-1 opacity-70">
-                                    {message.id.startsWith('temp-') ? 'Enviando...' :
-                                        new Date(message.createdAt).toLocaleTimeString('es-ES', {
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                        })
-                                    }
-                                </p>
+                                <div
+                                    className={`max-w-[70%] rounded-lg p-3 ${message.senderId !== currentUserId
+                                        ? 'bg-gray-800 text-white'
+                                        : 'text-white'
+                                        } ${message.id.startsWith('temp-') ? 'opacity-70' : ''}`}
+                                    style={message.senderId === currentUserId ? { backgroundColor: 'var(--accent)' } : undefined}
+                                >
+                                    <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                                    {message.mediaUrl && (
+                                        <img
+                                            src={message.mediaUrl}
+                                            alt="Media"
+                                            className="mt-2 rounded max-w-full"
+                                        />
+                                    )}
+                                    <p className="text-xs mt-1 opacity-70">
+                                        {message.id.startsWith('temp-') ? 'Enviando...' :
+                                            new Date(message.createdAt).toLocaleTimeString('es-ES', {
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })
+                                        }
+                                    </p>
+                                </div>
                             </div>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
                 <div ref={messagesEndRef} />
             </div>

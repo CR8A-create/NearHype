@@ -1,4 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { NextResponse } from 'next/server';
 
 // Rutas públicas (no requieren autenticación)
 const isPublicRoute = createRouteMatcher([
@@ -8,9 +9,25 @@ const isPublicRoute = createRouteMatcher([
     '/api/webhook(.*)',
 ]);
 
+// Rutas API (devolver 401 JSON en vez de redirect)
+const isApiRoute = createRouteMatcher([
+    '/api(.*)',
+]);
+
 export default clerkMiddleware(async (auth, request) => {
     if (!isPublicRoute(request)) {
-        await auth.protect();
+        try {
+            await auth.protect();
+        } catch {
+            // Para rutas API, devolver 401 JSON en lugar de redirect HTML
+            if (isApiRoute(request)) {
+                return NextResponse.json(
+                    { error: "No autenticado" },
+                    { status: 401 }
+                );
+            }
+            throw new Error("Unauthorized");
+        }
     }
 });
 

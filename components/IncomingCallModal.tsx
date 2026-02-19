@@ -55,7 +55,7 @@ export default function IncomingCallModal() {
             }
         };
 
-        const interval = setInterval(checkCalls, 3000);
+        const interval = setInterval(checkCalls, 5000);
         return () => {
             clearInterval(interval);
             stopRingtone();

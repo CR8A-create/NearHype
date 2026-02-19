@@ -38,6 +38,7 @@ export default function GlobalHeader() {
         if (!user) return;
         try {
             const res = await fetch('/api/user/status');
+            if (!res.ok) return;
             const data = await res.json();
 
             if (data.unreadMessages > unreadMessages || data.pendingRequests > pendingRequests) {
@@ -47,14 +48,14 @@ export default function GlobalHeader() {
             setUnreadMessages(data.unreadMessages || 0);
             setPendingRequests(data.pendingRequests || 0);
         } catch (e) {
-            console.error('Error fetching status', e);
+            // silent - avoid console spam
         }
     };
 
-    // Poll every 10 seconds
+    // Poll every 30 seconds (reduced to avoid Clerk rate limits)
     useEffect(() => {
         fetchStatus();
-        const interval = setInterval(fetchStatus, 10000);
+        const interval = setInterval(fetchStatus, 30000);
         return () => clearInterval(interval);
     }, [user, unreadMessages, pendingRequests]);
 

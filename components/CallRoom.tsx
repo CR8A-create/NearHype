@@ -302,7 +302,7 @@ export default function CallRoom({ roomId }: CallRoomProps) {
             await fetch(`/api/calls/${roomId}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ action: "end" }),
+                body: JSON.stringify({ action: "end", callDuration }),
             });
         } catch (e) {
             console.error("Error ending call:", e);
@@ -332,7 +332,7 @@ export default function CallRoom({ roomId }: CallRoomProps) {
                         )}
                     </div>
                     <button
-                        onClick={() => router.push("/messages")}
+                        onClick={() => router.replace("/messages")}
                         className="px-8 py-3 bg-accent text-white rounded-xl font-semibold hover:opacity-90 transition"
                     >
                         Volver a Mensajes

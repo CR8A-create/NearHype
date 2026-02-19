@@ -3,9 +3,72 @@
 
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { users, callRooms, callSignals } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { users, callRooms, callSignals, dmConversations, dmMessages } from "@/lib/db/schema";
+import { eq, and, or } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+
+// Helper: registrar evento de llamada en el chat DM
+async function registerCallMessage(callerId: string, calleeId: string, callType: string, status: string, duration?: number) {
+    try {
+        // Buscar o crear conversación DM entre los dos usuarios
+        const existingConv = await db.query.dmConversations.findFirst({
+            where: or(
+                and(eq(dmConversations.userId1, callerId), eq(dmConversations.userId2, calleeId)),
+                and(eq(dmConversations.userId1, calleeId), eq(dmConversations.userId2, callerId))
+            ),
+        });
+
+        let conversationId: string;
+
+        if (existingConv) {
+            conversationId = existingConv.id;
+        } else {
+            const [newConv] = await db.insert(dmConversations).values({
+                userId1: callerId,
+                userId2: calleeId,
+            }).returning();
+            conversationId = newConv.id;
+        }
+
+        // Determinar el contenido del mensaje según el estado
+        const typeLabel = callType === "video" ? "📹 Videollamada" : "📞 Llamada de voz";
+        let content: string;
+
+        switch (status) {
+            case "ended": {
+                const durationText = duration && duration > 0
+                    ? ` — ${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, "0")}`
+                    : "";
+                content = `${typeLabel} finalizada${durationText}`;
+                break;
+            }
+            case "rejected":
+                content = `${typeLabel} rechazada`;
+                break;
+            case "missed":
+                content = `${typeLabel} perdida`;
+                break;
+            default:
+                content = `${typeLabel}`;
+        }
+
+        // Insertar mensaje de sistema
+        await db.insert(dmMessages).values({
+            conversationId,
+            senderId: callerId,
+            content: `[CALL] ${content}`,
+        });
+
+        // Actualizar lastMessageAt
+        await db.update(dmConversations)
+            .set({ lastMessageAt: new Date() })
+            .where(eq(dmConversations.id, conversationId));
+
+    } catch (error) {
+        console.error("Error registering call message:", error);
+        // No propagar el error - esto es best-effort
+    }
+}
 
 // GET - Obtener info de la sala
 export async function GET(
@@ -75,7 +138,7 @@ export async function POST(
         if (!currentUser) return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
 
         const { roomId } = await params;
-        const { action } = await req.json();
+        const { action, callDuration } = await req.json();
 
         const room = await db.query.callRooms.findFirst({
             where: eq(callRooms.id, roomId),
@@ -98,6 +161,8 @@ export async function POST(
                 await db.update(callRooms)
                     .set({ status: "rejected", endedAt: new Date() })
                     .where(eq(callRooms.id, roomId));
+                // Registrar en el chat
+                await registerCallMessage(room.callerId, room.calleeId, room.callType, "rejected");
                 return NextResponse.json({ success: true, status: "rejected" });
 
             case "end":
@@ -106,6 +171,8 @@ export async function POST(
                     .where(eq(callRooms.id, roomId));
                 // Limpiar señales
                 await db.delete(callSignals).where(eq(callSignals.roomId, roomId));
+                // Registrar en el chat con duración
+                await registerCallMessage(room.callerId, room.calleeId, room.callType, "ended", callDuration);
                 return NextResponse.json({ success: true, status: "ended" });
 
             default:

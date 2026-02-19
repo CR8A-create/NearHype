@@ -44,10 +44,10 @@ export default function NotificationBell() {
         }
     };
 
-    // Polling cada 30 segundos
+    // Polling cada 60 segundos (reducido para evitar rate limits)
     useEffect(() => {
         loadNotifications();
-        const interval = setInterval(loadNotifications, 30000);
+        const interval = setInterval(loadNotifications, 60000);
         return () => clearInterval(interval);
     }, []);
 
