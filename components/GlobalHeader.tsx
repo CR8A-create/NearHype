@@ -9,6 +9,7 @@ import SettingsModal from "./SettingsModal";
 import NotificationBell from "./NotificationBell";
 import FriendRequestsModal from "./FriendRequestsModal";
 import FriendsList from "./FriendsList";
+import IncomingCallModal from "./IncomingCallModal";
 
 export default function GlobalHeader() {
     const pathname = usePathname();
@@ -272,6 +273,9 @@ export default function GlobalHeader() {
                     <FriendsList />
                 </div>
             )}
+
+            {/* Incoming call overlay - Always mounted */}
+            <IncomingCallModal />
         </>
     );
 }

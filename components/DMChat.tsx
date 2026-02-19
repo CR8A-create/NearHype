@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Send, Loader2, Image as ImageIcon, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Send, Loader2, Image as ImageIcon, X, Phone, Video } from "lucide-react";
 
 type Message = {
     id: string;
@@ -22,6 +23,7 @@ type DMChatProps = {
 };
 
 export default function DMChat({ conversationId, otherUser, currentUserId }: DMChatProps) {
+    const router = useRouter();
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState("");
     const [isLoading, setIsLoading] = useState(true);
@@ -29,6 +31,22 @@ export default function DMChat({ conversationId, otherUser, currentUserId }: DMC
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const isNearBottomRef = useRef(true);
+
+    const startCall = async (callType: "video" | "audio") => {
+        try {
+            const res = await fetch("/api/calls", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ calleeId: otherUser.id, callType }),
+            });
+            const data = await res.json();
+            if (data.room) {
+                router.push(`/calls/${data.room.id}`);
+            }
+        } catch (error) {
+            console.error("Error starting call:", error);
+        }
+    };
 
     // Track if user is scrolled near bottom to auto-scroll on new messages
     const checkIfNearBottom = useCallback(() => {
@@ -155,6 +173,23 @@ export default function DMChat({ conversationId, otherUser, currentUserId }: DMC
                         <h2 className="text-white font-bold">{otherUser.username}</h2>
                         <p className="text-xs text-gray-500">Mensajes Directos</p>
                     </div>
+                    {/* Call buttons */}
+                    <div className="ml-auto flex items-center gap-2">
+                        <button
+                            onClick={() => startCall("audio")}
+                            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-gray-300 hover:text-white transition"
+                            title="Llamada de voz"
+                        >
+                            <Phone className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={() => startCall("video")}
+                            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-gray-300 hover:text-white transition"
+                            title="Videollamada"
+                        >
+                            <Video className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -177,8 +212,8 @@ export default function DMChat({ conversationId, otherUser, currentUserId }: DMC
                         >
                             <div
                                 className={`max-w-[70%] rounded-lg p-3 ${message.senderId !== currentUserId
-                                        ? 'bg-gray-800 text-white'
-                                        : 'text-white'
+                                    ? 'bg-gray-800 text-white'
+                                    : 'text-white'
                                     } ${message.id.startsWith('temp-') ? 'opacity-70' : ''}`}
                                 style={message.senderId === currentUserId ? { backgroundColor: 'var(--accent)' } : undefined}
                             >

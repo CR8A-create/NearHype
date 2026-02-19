@@ -584,5 +584,40 @@ export type NewDmMessage = typeof dmMessages.$inferInsert;
 export type ProfileSwipe = typeof profileSwipes.$inferSelect;
 export type NewProfileSwipe = typeof profileSwipes.$inferInsert;
 
+// ====== CALL ROOMS ======
+export const callRooms = pgTable("call_rooms", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    callerId: uuid("caller_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    calleeId: uuid("callee_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    status: varchar("status", { length: 20 }).default("ringing").notNull(), // ringing, active, ended, missed, rejected
+    callType: varchar("call_type", { length: 10 }).default("video").notNull(), // video, audio
+    startedAt: timestamp("started_at"),
+    endedAt: timestamp("ended_at"),
+    createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+    callerIdx: index("idx_call_rooms_caller").on(table.callerId),
+    calleeIdx: index("idx_call_rooms_callee").on(table.calleeId),
+    statusIdx: index("idx_call_rooms_status").on(table.status),
+}));
 
+// ====== CALL SIGNALING ======
+export const callSignals = pgTable("call_signals", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    roomId: uuid("room_id").references(() => callRooms.id, { onDelete: "cascade" }).notNull(),
+    fromUserId: uuid("from_user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    toUserId: uuid("to_user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    signalType: varchar("signal_type", { length: 20 }).notNull(), // offer, answer, ice-candidate
+    signalData: jsonb("signal_data").notNull(),
+    consumed: boolean("consumed").default(false),
+    createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+    roomIdx: index("idx_call_signals_room").on(table.roomId),
+    toUserIdx: index("idx_call_signals_to_user").on(table.toUserId, table.consumed),
+}));
+
+// Call types
+export type CallRoom = typeof callRooms.$inferSelect;
+export type NewCallRoom = typeof callRooms.$inferInsert;
+export type CallSignal = typeof callSignals.$inferSelect;
+export type NewCallSignal = typeof callSignals.$inferInsert;
 
