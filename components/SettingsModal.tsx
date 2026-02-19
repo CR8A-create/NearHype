@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Plus, Trash2, MapPin, Loader2, Sparkles, User, Settings as SettingsIcon, Camera, Save } from "lucide-react";
+import { X, Plus, Trash2, MapPin, Loader2, Sparkles, User, Settings as SettingsIcon, Camera, Save, Palette, Check, Type } from "lucide-react";
 import ImageUpload from "./ImageUpload";
 import { useUser } from "@clerk/nextjs";
+import { useTheme, ACCENT_PRESETS } from "./ThemeProvider";
 
 type UserProfile = {
     settings: {
@@ -26,7 +27,10 @@ type UserProfile = {
 
 export default function SettingsModal({ onClose }: { onClose: () => void }) {
     const { user } = useUser();
-    const [activeTab, setActiveTab] = useState<'general' | 'public'>('general');
+    const [activeTab, setActiveTab] = useState<'general' | 'public' | 'appearance'>('general');
+    const { theme, updateTheme, saveTheme, isSaving: isSavingTheme } = useTheme();
+    const [customColor, setCustomColor] = useState(theme.accentColor);
+    const [chatBgInput, setChatBgInput] = useState(theme.chatBackground);
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -134,7 +138,7 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
 
                     <button
                         onClick={() => setActiveTab('general')}
-                        className={`text-left px-4 py-3 rounded-lg flex items-center gap-3 transition ${activeTab === 'general' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                        className={`text-left px-4 py-3 rounded-lg flex items-center gap-3 transition ${activeTab === 'general' ? 'bg-accent text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'
                             }`}
                     >
                         <SettingsIcon className="w-5 h-5" />
@@ -143,11 +147,20 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
 
                     <button
                         onClick={() => setActiveTab('public')}
-                        className={`text-left px-4 py-3 rounded-lg flex items-center gap-3 transition ${activeTab === 'public' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                        className={`text-left px-4 py-3 rounded-lg flex items-center gap-3 transition ${activeTab === 'public' ? 'bg-accent text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'
                             }`}
                     >
                         <User className="w-5 h-5" />
                         <span>Perfil Público</span>
+                    </button>
+
+                    <button
+                        onClick={() => setActiveTab('appearance')}
+                        className={`text-left px-4 py-3 rounded-lg flex items-center gap-3 transition ${activeTab === 'appearance' ? 'bg-accent text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                            }`}
+                    >
+                        <Palette className="w-5 h-5" />
+                        <span>Apariencia</span>
                     </button>
                 </div>
 
@@ -319,6 +332,152 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
                                 </div>
                             </div>
                         )}
+
+                        {/* APPEARANCE TAB */}
+                        {activeTab === 'appearance' && (
+                            <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+                                <div>
+                                    <h3 className="text-2xl font-bold text-white mb-1">Apariencia</h3>
+                                    <p className="text-gray-400 text-sm">Personaliza los colores y el estilo de tu app.</p>
+                                </div>
+
+                                {/* Accent Color */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-300 mb-3">Color de Acento</label>
+                                    <div className="grid grid-cols-4 sm:grid-cols-8 gap-3 mb-4">
+                                        {ACCENT_PRESETS.map((preset) => (
+                                            <button
+                                                key={preset.name}
+                                                onClick={() => {
+                                                    updateTheme({ accentColor: preset.color, accentHover: preset.hover });
+                                                    setCustomColor(preset.color);
+                                                }}
+                                                className="group relative"
+                                                title={preset.name}
+                                            >
+                                                <div
+                                                    className={`w-10 h-10 rounded-full border-2 transition-all ${theme.accentColor === preset.color
+                                                        ? 'border-white scale-110 shadow-lg'
+                                                        : 'border-transparent hover:border-white/30 hover:scale-105'
+                                                        }`}
+                                                    style={{ backgroundColor: preset.color }}
+                                                >
+                                                    {theme.accentColor === preset.color && (
+                                                        <Check className="w-5 h-5 text-white absolute inset-0 m-auto" />
+                                                    )}
+                                                </div>
+                                                <span className="text-[10px] text-gray-500 block text-center mt-1 truncate">{preset.name}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {/* Custom color picker */}
+                                    <div className="flex items-center gap-3 p-3 bg-black/20 rounded-lg border border-white/10">
+                                        <input
+                                            type="color"
+                                            value={customColor}
+                                            onChange={(e) => {
+                                                setCustomColor(e.target.value);
+                                                updateTheme({ accentColor: e.target.value });
+                                            }}
+                                            className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent"
+                                        />
+                                        <div>
+                                            <p className="text-white text-sm font-medium">Color personalizado</p>
+                                            <p className="text-gray-500 text-xs">Elige cualquier color que quieras</p>
+                                        </div>
+                                        <span className="ml-auto text-gray-400 text-sm font-mono">{customColor.toUpperCase()}</span>
+                                    </div>
+                                </div>
+
+                                {/* Chat Background */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-300 mb-3">Fondo de Chat</label>
+                                    <div className="space-y-3">
+                                        <div className="grid grid-cols-5 gap-2 mb-3">
+                                            {['', '#1a1a2e', '#16213e', '#0f3460', '#1b1b2f'].map((bg, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => {
+                                                        updateTheme({ chatBackground: bg });
+                                                        setChatBgInput(bg);
+                                                    }}
+                                                    className={`h-12 rounded-lg border-2 transition-all ${theme.chatBackground === bg
+                                                        ? 'border-white scale-105'
+                                                        : 'border-white/10 hover:border-white/30'
+                                                        }`}
+                                                    style={{ backgroundColor: bg || '#111827' }}
+                                                    title={bg || 'Por defecto'}
+                                                >
+                                                    {!bg && <span className="text-gray-500 text-xs">Default</span>}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={chatBgInput}
+                                            onChange={(e) => {
+                                                setChatBgInput(e.target.value);
+                                                updateTheme({ chatBackground: e.target.value });
+                                            }}
+                                            placeholder="Color hex (#1a1a2e), gradiente, o URL de imagen..."
+                                            className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 ring-accent text-sm"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Font Size */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+                                        <Type className="w-4 h-4" />
+                                        Tamaño de Texto
+                                    </label>
+                                    <div className="grid grid-cols-3 gap-3">
+                                        {(["small", "normal", "large"] as const).map((size) => (
+                                            <button
+                                                key={size}
+                                                onClick={() => updateTheme({ fontSize: size })}
+                                                className={`px-4 py-3 rounded-lg border-2 transition-all text-center ${theme.fontSize === size
+                                                    ? 'border-white bg-white/10 text-white'
+                                                    : 'border-white/10 text-gray-400 hover:border-white/30 hover:text-white'
+                                                    }`}
+                                            >
+                                                <span className={size === 'small' ? 'text-sm' : size === 'large' ? 'text-lg' : 'text-base'}>
+                                                    {size === 'small' ? 'Pequeño' : size === 'normal' ? 'Normal' : 'Grande'}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Live Preview */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-300 mb-3">Vista previa</label>
+                                    <div className="rounded-lg border border-white/10 overflow-hidden">
+                                        <div className="p-3 border-b border-white/10" style={{ backgroundColor: 'var(--accent)' }}>
+                                            <span className="text-white font-semibold text-sm">Chat con @usuario</span>
+                                        </div>
+                                        <div className="p-4 space-y-3" style={{
+                                            backgroundColor: theme.chatBackground || '#111827',
+                                            background: theme.chatBackground?.startsWith('http')
+                                                ? `url(${theme.chatBackground}) center/cover`
+                                                : theme.chatBackground || '#111827'
+                                        }}>
+                                            <div className="flex justify-start">
+                                                <div className="bg-gray-700/80 backdrop-blur rounded-lg px-3 py-2 max-w-[70%]">
+                                                    <p className="text-white text-sm">¡Hola! ¿Qué tal?</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-end">
+                                                <div className="rounded-lg px-3 py-2 max-w-[70%]" style={{ backgroundColor: 'var(--accent)' }}>
+                                                    <p className="text-white text-sm">¡Todo bien! Me encanta este color 🎨</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Footer Actions */}
@@ -330,11 +489,14 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
                             Cancelar
                         </button>
                         <button
-                            onClick={handleSave}
-                            disabled={isSaving || bio.length > 300}
-                            className="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            onClick={async () => {
+                                await handleSave();
+                                await saveTheme();
+                            }}
+                            disabled={isSaving || isSavingTheme || bio.length > 300}
+                            className="px-6 py-2.5 bg-accent text-white rounded-lg bg-accent-hover transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                         >
-                            {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                            {(isSaving || isSavingTheme) ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                             Guardar Cambios
                         </button>
                     </div>

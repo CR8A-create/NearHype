@@ -130,7 +130,7 @@ export default function DMChat({ conversationId, otherUser, currentUserId }: DMC
     if (isLoading) {
         return (
             <div className="flex-1 flex items-center justify-center bg-gray-900">
-                <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+                <Loader2 className="w-8 h-8 text-accent animate-spin" />
             </div>
         );
     }
@@ -147,7 +147,7 @@ export default function DMChat({ conversationId, otherUser, currentUserId }: DMC
                             className="w-10 h-10 rounded-full"
                         />
                     ) : (
-                        <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold">
+                        <div className="w-10 h-10 bg-accent rounded-full flex items-center justify-center text-white font-bold">
                             {otherUser.username[0].toUpperCase()}
                         </div>
                     )}
@@ -163,6 +163,7 @@ export default function DMChat({ conversationId, otherUser, currentUserId }: DMC
                 ref={messagesContainerRef}
                 onScroll={checkIfNearBottom}
                 className="flex-1 overflow-y-auto p-4 space-y-4"
+                style={{ backgroundColor: 'var(--chat-bg, transparent)' }}
             >
                 {messages.length === 0 ? (
                     <div className="text-center text-gray-500 mt-8">
@@ -175,10 +176,11 @@ export default function DMChat({ conversationId, otherUser, currentUserId }: DMC
                             className={`flex ${message.senderId === currentUserId ? 'justify-end' : 'justify-start'}`}
                         >
                             <div
-                                className={`max-w-[70%] rounded-lg p-3 ${message.senderId === currentUserId
-                                    ? 'bg-indigo-600 text-white'
-                                    : 'bg-gray-800 text-white'
+                                className={`max-w-[70%] rounded-lg p-3 ${message.senderId !== currentUserId
+                                        ? 'bg-gray-800 text-white'
+                                        : 'text-white'
                                     } ${message.id.startsWith('temp-') ? 'opacity-70' : ''}`}
+                                style={message.senderId === currentUserId ? { backgroundColor: 'var(--accent)' } : undefined}
                             >
                                 <p className="whitespace-pre-wrap break-words">{message.content}</p>
                                 {message.mediaUrl && (
@@ -211,13 +213,13 @@ export default function DMChat({ conversationId, otherUser, currentUserId }: DMC
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         placeholder="Escribe un mensaje..."
-                        className="flex-1 px-4 py-3 bg-gray-800 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="flex-1 px-4 py-3 bg-gray-800 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 ring-accent"
                         disabled={isSending}
                     />
                     <button
                         type="submit"
                         disabled={!newMessage.trim() || isSending}
-                        className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        className="px-6 py-3 bg-accent bg-accent-hover text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
                         {isSending ? (
                             <Loader2 className="w-5 h-5 animate-spin" />

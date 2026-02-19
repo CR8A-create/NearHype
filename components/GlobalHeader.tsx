@@ -78,7 +78,7 @@ export default function GlobalHeader() {
     // Shared nav link style helper
     const navLinkClass = (path: string, isMobile = false) =>
         `flex items-center gap-3 ${isMobile ? 'px-4 py-3 w-full' : 'px-3 sm:px-4 py-2'} rounded-lg font-semibold transition ${isActive(path)
-            ? 'bg-indigo-600/20 text-indigo-400'
+            ? 'bg-accent/20 text-accent'
             : 'text-gray-400 hover:text-white hover:bg-white/5'
         }`;
 

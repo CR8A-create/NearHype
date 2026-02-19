@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { esES } from "@clerk/localizations";
+import ThemeProvider from "@/components/ThemeProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -42,7 +43,9 @@ export default function RootLayout({
           <link rel="apple-touch-icon" href="/icon-192x192.png" />
         </head>
         <body className={`${inter.className} antialiased bg-gray-50 dark:bg-gray-900`} suppressHydrationWarning>
-          {children}
+          <ThemeProvider>
+            {children}
+          </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>
