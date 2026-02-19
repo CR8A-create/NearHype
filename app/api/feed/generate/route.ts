@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { getOrCreateUser } from "@/lib/getOrCreateUser";
 import { db } from "@/lib/db";
 import { users, userInterests, userLocations, feedCache } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -26,15 +26,15 @@ interface ContentItem {
 
 export async function GET() {
     try {
-        const { userId: clerkId } = await auth();
+        const user = await getOrCreateUser();
 
-        if (!clerkId) {
+        if (!user) {
             return NextResponse.json({ error: "No autenticado" }, { status: 401 });
         }
 
-        // 1. Obtener usuario completo de la DB
-        const user = await db.query.users.findFirst({
-            where: eq(users.clerkId, clerkId),
+        // 1. Obtener usuario completo de la DB con relaciones
+        const fullUser = await db.query.users.findFirst({
+            where: eq(users.clerkId, user.clerkId),
             with: {
                 interests: true,
                 locations: {
@@ -45,15 +45,17 @@ export async function GET() {
             },
         });
 
-        if (!user || !user.interests.length || !user.locations.length) {
-            return NextResponse.json(
-                { error: "Complete el onboarding primero" },
-                { status: 400 }
-            );
+        if (!fullUser || !fullUser.interests.length || !fullUser.locations.length) {
+            // Usuario no ha completado onboarding - devolver feed vacío con mensaje
+            return NextResponse.json({
+                items: [],
+                message: "Completa el onboarding para ver tu feed personalizado",
+                needsOnboarding: true,
+            });
         }
 
         // 2. Verificar cache
-        const cacheKey = generateCacheKey(user.id, user.interests.map(i => i.topic));
+        const cacheKey = generateCacheKey(fullUser.id, fullUser.interests.map((i: { topic: string }) => i.topic));
         const existingCache = await db.query.feedCache.findFirst({
             where: eq(feedCache.cacheKey, cacheKey),
         });
@@ -66,7 +68,7 @@ export async function GET() {
             return NextResponse.json({
                 items: existingCache.feedData,
                 generatedAt: existingCache.generatedAt?.toISOString() || new Date().toISOString(),
-                userLocation: user.locations[0].city,
+                userLocation: fullUser.locations[0].city,
                 totalSources: 5, // Múltiples fuentes
                 cached: true,
             });
@@ -74,10 +76,10 @@ export async function GET() {
 
         // 3. Preparar datos del usuario
         console.log('Generating new feed with multiple APIs...');
-        const interests = user.interests.map(i => i.topic);
+        const interests = fullUser.interests.map((i: { topic: string }) => i.topic);
         const location = {
-            city: user.locations[0].city || "España",
-            country: user.locations[0].countryCode || "ES"
+            city: fullUser.locations[0].city || "España",
+            country: fullUser.locations[0].countryCode || "ES"
         };
 
         // 4. ESTRATEGIA DE BÚSQUEDA POR ANILLOS (EXPANDING RINGS)

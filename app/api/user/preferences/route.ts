@@ -1,26 +1,18 @@
 // app/api/user/preferences/route.ts - Theme preferences API
 
-import { auth } from "@clerk/nextjs/server";
+import { getOrCreateUser } from "@/lib/getOrCreateUser";
 import { db } from "@/lib/db";
-import { users, userSettings } from "@/lib/db/schema";
+import { userSettings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 // GET /api/user/preferences - Obtener preferencias de tema
 export async function GET() {
     try {
-        const { userId: clerkId } = await auth();
-
-        if (!clerkId) {
-            return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-        }
-
-        const user = await db.query.users.findFirst({
-            where: eq(users.clerkId, clerkId),
-        });
+        const user = await getOrCreateUser();
 
         if (!user) {
-            return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
+            return NextResponse.json({ error: "No autenticado" }, { status: 401 });
         }
 
         const settings = await db.query.userSettings.findFirst({
@@ -44,18 +36,10 @@ export async function GET() {
 // PUT /api/user/preferences - Guardar preferencias de tema
 export async function PUT(req: NextRequest) {
     try {
-        const { userId: clerkId } = await auth();
-
-        if (!clerkId) {
-            return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-        }
-
-        const user = await db.query.users.findFirst({
-            where: eq(users.clerkId, clerkId),
-        });
+        const user = await getOrCreateUser();
 
         if (!user) {
-            return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
+            return NextResponse.json({ error: "No autenticado" }, { status: 401 });
         }
 
         const { theme } = await req.json();

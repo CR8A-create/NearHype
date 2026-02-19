@@ -1,26 +1,17 @@
 // app/api/notifications/route.ts - GET para listar notificaciones
 
-import { auth } from "@clerk/nextjs/server";
+import { getOrCreateUser } from "@/lib/getOrCreateUser";
 import { db } from "@/lib/db";
-import { users, notifications } from "@/lib/db/schema";
-import { eq, desc, and } from "drizzle-orm";
+import { notifications } from "@/lib/db/schema";
+import { eq, desc } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 export async function GET() {
     try {
-        const { userId: clerkId } = await auth();
-
-        if (!clerkId) {
-            return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-        }
-
-        // Buscar usuario
-        const user = await db.query.users.findFirst({
-            where: eq(users.clerkId, clerkId),
-        });
+        const user = await getOrCreateUser();
 
         if (!user) {
-            return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
+            return NextResponse.json({ error: "No autenticado" }, { status: 401 });
         }
 
         // Obtener notificaciones (últimas 50)

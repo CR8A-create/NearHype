@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { getOrCreateUser } from "@/lib/getOrCreateUser";
 import { db } from "@/lib/db";
 import { users, userInterests, userLocations, userSettings } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -6,15 +6,15 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET() {
     try {
-        const { userId: clerkId } = await auth();
+        const user = await getOrCreateUser();
 
-        if (!clerkId) {
+        if (!user) {
             return NextResponse.json({ error: "No autenticado" }, { status: 401 });
         }
 
-        // Buscar usuario en la DB
-        const user = await db.query.users.findFirst({
-            where: eq(users.clerkId, clerkId),
+        // Load user with relations
+        const fullUser = await db.query.users.findFirst({
+            where: eq(users.id, user.id),
             with: {
                 interests: true,
                 locations: {
@@ -25,20 +25,20 @@ export async function GET() {
             },
         });
 
-        if (!user) {
+        if (!fullUser) {
             return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
         }
 
         return NextResponse.json({
-            id: user.id,
-            email: user.email,
-            username: user.username,
-            avatarUrl: user.avatarUrl,
-            bio: user.bio,
-            onboardingCompleted: user.onboardingCompleted,
-            interests: user.interests,
-            location: user.locations[0] || null,
-            settings: user.settings,
+            id: fullUser.id,
+            email: fullUser.email,
+            username: fullUser.username,
+            avatarUrl: fullUser.avatarUrl,
+            bio: fullUser.bio,
+            onboardingCompleted: fullUser.onboardingCompleted,
+            interests: fullUser.interests,
+            location: fullUser.locations[0] || null,
+            settings: fullUser.settings,
         });
     } catch (error) {
         console.error("Error fetching user profile:", error);
@@ -51,18 +51,10 @@ export async function GET() {
 
 export async function PUT(req: NextRequest) {
     try {
-        const { userId: clerkId } = await auth();
-
-        if (!clerkId) {
-            return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-        }
-
-        const user = await db.query.users.findFirst({
-            where: eq(users.clerkId, clerkId),
-        });
+        const user = await getOrCreateUser();
 
         if (!user) {
-            return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
+            return NextResponse.json({ error: "No autenticado" }, { status: 401 });
         }
 
         const body = await req.json();

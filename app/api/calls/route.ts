@@ -1,7 +1,7 @@
 // POST /api/calls - Crear una llamada (llamar a alguien)
 // GET /api/calls - Obtener incoming calls
 
-import { auth } from "@clerk/nextjs/server";
+import { getOrCreateUser } from "@/lib/getOrCreateUser";
 import { db } from "@/lib/db";
 import { users, callRooms, friendships } from "@/lib/db/schema";
 import { eq, or, and, desc } from "drizzle-orm";
@@ -10,11 +10,8 @@ import { NextRequest, NextResponse } from "next/server";
 // POST - Crear una llamada nueva
 export async function POST(req: NextRequest) {
     try {
-        const { userId: clerkId } = await auth();
-        if (!clerkId) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-
-        const currentUser = await db.query.users.findFirst({ where: eq(users.clerkId, clerkId) });
-        if (!currentUser) return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
+        const currentUser = await getOrCreateUser();
+        if (!currentUser) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
         const { calleeId, callType = "video" } = await req.json();
 
@@ -67,11 +64,8 @@ export async function POST(req: NextRequest) {
 // GET - Obtener llamadas entrantes
 export async function GET() {
     try {
-        const { userId: clerkId } = await auth();
-        if (!clerkId) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-
-        const currentUser = await db.query.users.findFirst({ where: eq(users.clerkId, clerkId) });
-        if (!currentUser) return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
+        const currentUser = await getOrCreateUser();
+        if (!currentUser) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
         // Buscar llamadas entrantes "ringing" para este usuario
         const incomingCalls = await db

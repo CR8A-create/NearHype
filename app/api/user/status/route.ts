@@ -1,26 +1,18 @@
 // app/api/user/status/route.ts - Estado del usuario (mensajes no leidos, solicitudes pendientes)
 
-import { auth } from "@clerk/nextjs/server";
+import { getOrCreateUser } from "@/lib/getOrCreateUser";
 import { db } from "@/lib/db";
-import { users, dmConversations, dmMessages, friendRequests } from "@/lib/db/schema";
+import { dmConversations, dmMessages, friendRequests } from "@/lib/db/schema";
 import { eq, or, and, ne } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 // GET /api/user/status - Obtener contadores de notificaciones
 export async function GET() {
     try {
-        const { userId: clerkId } = await auth();
-
-        if (!clerkId) {
-            return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-        }
-
-        const user = await db.query.users.findFirst({
-            where: eq(users.clerkId, clerkId),
-        });
+        const user = await getOrCreateUser();
 
         if (!user) {
-            return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
+            return NextResponse.json({ error: "No autenticado" }, { status: 401 });
         }
 
         // Contar mensajes DM no leídos (donde soy receptor)
