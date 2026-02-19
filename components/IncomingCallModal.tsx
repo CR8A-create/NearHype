@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { Phone, PhoneOff, Video, X } from "lucide-react";
 
 type IncomingCall = {
@@ -15,15 +16,26 @@ type IncomingCall = {
 
 export default function IncomingCallModal() {
     const router = useRouter();
+    const { isSignedIn } = useUser();
     const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
     const [isResponding, setIsResponding] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const failCountRef = useRef(0);
 
-    // Poll for incoming calls every 2 seconds
+    // Poll for incoming calls every 3 seconds (only when signed in)
     useEffect(() => {
+        if (!isSignedIn) return;
+
         const checkCalls = async () => {
             try {
                 const res = await fetch("/api/calls");
+                if (!res.ok) {
+                    failCountRef.current++;
+                    // Back off if repeated failures
+                    if (failCountRef.current > 5) return;
+                    return;
+                }
+                failCountRef.current = 0;
                 const data = await res.json();
                 if (data.incomingCall && !isResponding) {
                     setIncomingCall(data.incomingCall);
@@ -39,16 +51,16 @@ export default function IncomingCallModal() {
                     stopRingtone();
                 }
             } catch {
-                // silent
+                failCountRef.current++;
             }
         };
 
-        const interval = setInterval(checkCalls, 2000);
+        const interval = setInterval(checkCalls, 3000);
         return () => {
             clearInterval(interval);
             stopRingtone();
         };
-    }, [incomingCall, isResponding]);
+    }, [incomingCall, isResponding, isSignedIn]);
 
     const stopRingtone = () => {
         if (audioRef.current) {
