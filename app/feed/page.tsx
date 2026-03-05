@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import { MapPin, Sparkles, RefreshCw, Filter, TrendingUp, Calendar, Users, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import GlobalHeader from "@/components/GlobalHeader";
@@ -31,12 +32,14 @@ type FeedResponse = {
 
 export default function FeedPage() {
     const { user } = useUser();
+    const router = useRouter();
     const [feed, setFeed] = useState<FeedResponse | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState("");
+    const [needsOnboarding, setNeedsOnboarding] = useState(false);
     const [filterCategory, setFilterCategory] = useState<string>("all");
-    const [displayedCount, setDisplayedCount] = useState(20); // Mostrar 20 inicialmente
+    const [displayedCount, setDisplayedCount] = useState(20);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
 
     // Cargar feed al montar
@@ -70,12 +73,24 @@ export default function FeedPage() {
             const res = await fetch('/api/feed/generate');
 
             if (!res.ok) {
+                if (res.status === 401) {
+                    // Not authenticated yet, wait briefly
+                    return;
+                }
                 throw new Error('Error al cargar el feed');
             }
 
             const data = await res.json();
+
+            // If user hasn't completed onboarding, redirect them
+            if (data.needsOnboarding) {
+                setNeedsOnboarding(true);
+                setIsLoading(false);
+                return;
+            }
+
             setFeed(data);
-            setDisplayedCount(20); // Reset al cargar nuevo feed
+            setDisplayedCount(20);
         } catch (err) {
             console.error('Error loading feed:', err);
             setError("No pudimos cargar tu feed. Por favor intenta de nuevo.");
@@ -118,119 +133,141 @@ export default function FeedPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-            {/* Global Header */}
             <GlobalHeader />
 
-            <div className="container mx-auto px-4 py-8">
-                {/* Info del feed */}
-                {feed && (
-                    <div className="mb-8 p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
-                        <div className="flex items-center justify-between flex-wrap gap-4">
-                            <div className="flex items-center gap-6">
-                                <div className="flex items-center gap-2 text-gray-300">
-                                    <MapPin className="w-5 h-5 text-indigo-400" />
-                                    <span className="font-semibold">{feed.userLocation}</span>
+            {/* Onboarding prompt */}
+            {needsOnboarding && (
+                <div className="container mx-auto px-4 py-16 flex items-center justify-center">
+                    <div className="max-w-md w-full text-center space-y-6 bg-white/5 border border-white/10 rounded-2xl p-10">
+                        <Sparkles className="w-14 h-14 text-indigo-400 mx-auto" />
+                        <h2 className="text-2xl font-bold text-white">Configura tu perfil</h2>
+                        <p className="text-gray-400">
+                            Para ver tu feed personalizado necesitas seleccionar tus intereses y ubicación.
+                            Solo toma 2 minutos.
+                        </p>
+                        <button
+                            onClick={() => router.push("/onboarding")}
+                            className="w-full py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition"
+                        >
+                            Configurar mi perfil →
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Main feed */}
+            {!needsOnboarding && (
+                <div className="container mx-auto px-4 py-8">
+                    {/* Info del feed */}
+                    {feed && (
+                        <div className="mb-8 p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
+                            <div className="flex items-center justify-between flex-wrap gap-4">
+                                <div className="flex items-center gap-6">
+                                    <div className="flex items-center gap-2 text-gray-300">
+                                        <MapPin className="w-5 h-5 text-indigo-400" />
+                                        <span className="font-semibold">{feed.userLocation}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-gray-300">
+                                        <Sparkles className="w-5 h-5 text-purple-400" />
+                                        <span>{feed.totalSources} fuentes consultadas</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-gray-300">
+                                        <TrendingUp className="w-5 h-5 text-green-400" />
+                                        <span>{filteredItems.length} resultados</span>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2 text-gray-300">
-                                    <Sparkles className="w-5 h-5 text-purple-400" />
-                                    <span>{feed.totalSources} fuentes consultadas</span>
+                                <div className="text-sm text-gray-400">
+                                    Última actualización: {new Date(feed.generatedAt).toLocaleTimeString('es-ES')}
                                 </div>
-                                <div className="flex items-center gap-2 text-gray-300">
-                                    <TrendingUp className="w-5 h-5 text-green-400" />
-                                    <span>{filteredItems.length} resultados</span>
-                                </div>
-                            </div>
-                            <div className="text-sm text-gray-400">
-                                Última actualización: {new Date(feed.generatedAt).toLocaleTimeString('es-ES')}
                             </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {/* Filtros de categoría */}
-                <div className="mb-6 flex gap-3 overflow-x-auto pb-2">
-                    {categories.map(cat => (
-                        <button
-                            key={cat}
-                            onClick={() => setFilterCategory(cat)}
-                            className={`px-4 py-2 rounded-full whitespace-nowrap transition ${filterCategory === cat
-                                ? 'bg-indigo-600 text-white'
-                                : 'bg-white/5 text-gray-300 hover:bg-white/10'
-                                }`}
-                        >
-                            {cat === "all" ? "Todo" : cat.charAt(0).toUpperCase() + cat.slice(1)}
-                        </button>
-                    ))}
-                </div>
-
-                {/* Loading state */}
-                {isLoading && (
-                    <div className="flex flex-col items-center justify-center py-20">
-                        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-500 mb-4"></div>
-                        <p className="text-gray-300 text-lg">Generando tu feed personalizado con IA...</p>
-                        <p className="text-gray-500 text-sm mt-2">Esto puede tomar unos segundos</p>
-                    </div>
-                )}
-
-                {/* Error state */}
-                {error && (
-                    <div className="p-6 bg-red-500/20 border border-red-500 rounded-xl text-center">
-                        <p className="text-red-200 mb-4">{error}</p>
-                        <button
-                            onClick={loadFeed}
-                            className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-                        >
-                            Intentar de nuevo
-                        </button>
-                    </div>
-                )}
-
-                {/* Feed Grid */}
-                {!isLoading && !error && filteredItems.length > 0 && (
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {filteredItems.map(item => (
-                            <FeedCard key={item.id} item={item} />
+                    {/* Filtros de categoría */}
+                    <div className="mb-6 flex gap-3 overflow-x-auto pb-2">
+                        {categories.map(cat => (
+                            <button
+                                key={cat}
+                                onClick={() => setFilterCategory(cat)}
+                                className={`px-4 py-2 rounded-full whitespace-nowrap transition ${filterCategory === cat
+                                    ? 'bg-indigo-600 text-white'
+                                    : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                                    }`}
+                            >
+                                {cat === "all" ? "Todo" : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                            </button>
                         ))}
                     </div>
-                )}
 
-                {/* Empty state */}
-                {!isLoading && !error && filteredItems.length === 0 && (
-                    <div className="text-center py-20">
-                        <Sparkles className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                        <h3 className="text-xl font-bold text-gray-300 mb-2">
-                            No encontramos contenido para esta categoría
-                        </h3>
-                        <p className="text-gray-500 mb-6">
-                            Intenta con otra categoría o actualiza tus intereses
-                        </p>
-                        <Link
-                            href="/settings"
-                            className="inline-block px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-                        >
-                            Editar Intereses
-                        </Link>
-                    </div>
-                )}
-
-                {/* Loading More Indicator */}
-                {!isLoading && !error && isLoadingMore && (
-                    <div className="flex justify-center py-8">
-                        <div className="flex items-center gap-3 text-gray-400">
-                            <RefreshCw className="w-5 h-5 animate-spin" />
-                            <span>Cargando más contenido...</span>
+                    {/* Loading state */}
+                    {isLoading && (
+                        <div className="flex flex-col items-center justify-center py-20">
+                            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-500 mb-4"></div>
+                            <p className="text-gray-300 text-lg">Generando tu feed personalizado con IA...</p>
+                            <p className="text-gray-500 text-sm mt-2">Esto puede tomar unos segundos</p>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {/* End of results indicator */}
-                {!isLoading && !error && filteredItems.length > 0 && displayedCount >= allFilteredItems.length && (
-                    <div className="text-center py-8 text-gray-500">
-                        <p>Has visto todo el contenido disponible 🎉</p>
-                        <p className="text-sm mt-2">Total: {allFilteredItems.length} items</p>
-                    </div>
-                )}
-            </div>
+                    {/* Error state */}
+                    {error && (
+                        <div className="p-6 bg-red-500/20 border border-red-500 rounded-xl text-center">
+                            <p className="text-red-200 mb-4">{error}</p>
+                            <button
+                                onClick={loadFeed}
+                                className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                            >
+                                Intentar de nuevo
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Feed Grid */}
+                    {!isLoading && !error && filteredItems.length > 0 && (
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {filteredItems.map(item => (
+                                <FeedCard key={item.id} item={item} />
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Empty state */}
+                    {!isLoading && !error && filteredItems.length === 0 && (
+                        <div className="text-center py-20">
+                            <Sparkles className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                            <h3 className="text-xl font-bold text-gray-300 mb-2">
+                                No encontramos contenido para esta categoría
+                            </h3>
+                            <p className="text-gray-500 mb-6">
+                                Intenta con otra categoría o actualiza tus intereses
+                            </p>
+                            <Link
+                                href="/settings"
+                                className="inline-block px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                            >
+                                Editar Intereses
+                            </Link>
+                        </div>
+                    )}
+
+                    {/* Loading More */}
+                    {!isLoading && !error && isLoadingMore && (
+                        <div className="flex justify-center py-8">
+                            <div className="flex items-center gap-3 text-gray-400">
+                                <RefreshCw className="w-5 h-5 animate-spin" />
+                                <span>Cargando más contenido...</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* End of results */}
+                    {!isLoading && !error && filteredItems.length > 0 && displayedCount >= allFilteredItems.length && (
+                        <div className="text-center py-8 text-gray-500">
+                            <p>Has visto todo el contenido disponible 🎉</p>
+                            <p className="text-sm mt-2">Total: {allFilteredItems.length} items</p>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
