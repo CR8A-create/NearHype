@@ -1,4 +1,5 @@
 import withPWAInit from "@ducanh2912/next-pwa";
+import { NextConfig } from "next";
 
 const withPWA = withPWAInit({
   dest: "public",
@@ -7,27 +8,35 @@ const withPWA = withPWAInit({
   sw: "sw.js",
 });
 
-const nextConfig = {
+const nextConfig: NextConfig = {
+  // Clerk proxy: routes Clerk traffic through /api/clerk instead of clerk.nearhype.com
+  // This eliminates the need for clerk.nearhype.com and accounts.nearhype.com DNS CNAMEs
+  async rewrites() {
+    return [
+      {
+        source: "/api/clerk/:path*",
+        destination: "https://clerk.nearhype.com/:path*",
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {
-        protocol: 'https' as const,
-        hostname: 'img.clerk.com',
+        protocol: "https" as const,
+        hostname: "img.clerk.com",
       },
       {
-        protocol: 'https' as const,
-        hostname: 'images.clerk.dev',
+        protocol: "https" as const,
+        hostname: "images.clerk.dev",
       },
       {
-        protocol: 'https' as const,
-        hostname: 'utfs.io',
+        protocol: "https" as const,
+        hostname: "utfs.io",
       },
     ],
   },
-  // Configuración vacía de turbopack para silenciar el error de build
-  // El plugin PWA usa webpack, pero la app funciona correctamente
   turbopack: {},
-  serverExternalPackages: ['uploadthing'],
+  serverExternalPackages: ["uploadthing"],
 };
 
 export default withPWA(nextConfig);
