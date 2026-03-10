@@ -9,16 +9,6 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
-  // Clerk proxy: routes Clerk traffic through /api/clerk instead of clerk.nearhype.com
-  // This eliminates the need for clerk.nearhype.com and accounts.nearhype.com DNS CNAMEs
-  async rewrites() {
-    return [
-      {
-        source: "/api/clerk/:path*",
-        destination: "https://clerk.nearhype.com/:path*",
-      },
-    ];
-  },
   images: {
     remotePatterns: [
       {
