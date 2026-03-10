@@ -1,26 +1,39 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { MapPin, Sparkles, RefreshCw, Filter, TrendingUp, Calendar, Users, ExternalLink } from "lucide-react";
+import {
+    MapPin, Sparkles, RefreshCw, TrendingUp,
+    ExternalLink, Play, MessageSquare, Gamepad2,
+    Lightbulb, Target, Newspaper, Music, Globe, ArrowUp
+} from "lucide-react";
 import Link from "next/link";
 import GlobalHeader from "@/components/GlobalHeader";
 
 type ContentItem = {
     id: string;
+    type: 'article' | 'video' | 'music' | 'image' | 'game' | 'fact' | 'recommendation' | 'reddit';
     title: string;
     description: string;
     url: string;
+    embedUrl?: string;
+    thumbnailUrl?: string;
     source: string;
     publishedAt: string;
-    location?: {
-        city: string;
-        distance: number;
-    };
     relevanceScore: number;
     category: string;
     imageUrl?: string;
+    mediaType?: 'youtube' | 'spotify' | 'reddit' | 'image' | 'link' | 'game';
+    duration?: string;
+    interactionCount?: number;
+    isRecommendation?: boolean;
+    reason?: string;
+    icon?: string;
+    location?: { city: string; distance: number };
+    subreddit?: string;
+    score?: number;
+    numComments?: number;
 };
 
 type FeedResponse = {
@@ -39,28 +52,21 @@ export default function FeedPage() {
     const [error, setError] = useState("");
     const [needsOnboarding, setNeedsOnboarding] = useState(false);
     const [filterCategory, setFilterCategory] = useState<string>("all");
-    const [displayedCount, setDisplayedCount] = useState(20);
+    const [displayedCount, setDisplayedCount] = useState(15);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [showScrollTop, setShowScrollTop] = useState(false);
 
-    // Cargar feed al montar
-    useEffect(() => {
-        loadFeed();
-    }, []);
+    useEffect(() => { loadFeed(); }, []);
 
-    // Infinite scroll: detectar cuando el usuario llega al final
+    // Infinite scroll
     useEffect(() => {
         const handleScroll = () => {
             if (isLoadingMore) return;
-
-            const scrollPosition = window.innerHeight + window.scrollY;
-            const pageHeight = document.documentElement.scrollHeight;
-
-            // Si está a 300px del final, cargar más
-            if (scrollPosition >= pageHeight - 300) {
+            setShowScrollTop(window.scrollY > 800);
+            if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 500) {
                 loadMore();
             }
         };
-
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, [displayedCount, feed, filterCategory, isLoadingMore]);
@@ -68,32 +74,23 @@ export default function FeedPage() {
     const loadFeed = async () => {
         setIsLoading(true);
         setError("");
-
         try {
             const res = await fetch('/api/feed/generate');
-
             if (!res.ok) {
-                if (res.status === 401) {
-                    // Not authenticated yet, wait briefly
-                    return;
-                }
+                if (res.status === 401) return;
                 throw new Error('Error al cargar el feed');
             }
-
             const data = await res.json();
-
-            // If user hasn't completed onboarding, redirect them
             if (data.needsOnboarding) {
                 setNeedsOnboarding(true);
                 setIsLoading(false);
                 return;
             }
-
             setFeed(data);
-            setDisplayedCount(20);
+            setDisplayedCount(15);
         } catch (err) {
             console.error('Error loading feed:', err);
-            setError("No pudimos cargar tu feed. Por favor intenta de nuevo.");
+            setError("No pudimos cargar tu feed. Intenta de nuevo.");
         } finally {
             setIsLoading(false);
         }
@@ -105,34 +102,44 @@ export default function FeedPage() {
         setIsRefreshing(false);
     };
 
-    const loadMore = () => {
+    const loadMore = useCallback(() => {
         if (!feed || isLoadingMore) return;
-
-        const filtered = feed.items.filter(item =>
-            filterCategory === "all" || item.category === filterCategory
-        );
-
-        if (displayedCount >= filtered.length) return; // Ya mostramos todo
-
+        const filtered = getFilteredItems();
+        if (displayedCount >= filtered.length) return;
         setIsLoadingMore(true);
         setTimeout(() => {
             setDisplayedCount(prev => Math.min(prev + 10, filtered.length));
             setIsLoadingMore(false);
-        }, 300); // Pequeño delay para simular carga
+        }, 200);
+    }, [feed, isLoadingMore, displayedCount, filterCategory]);
+
+    const getFilteredItems = () => {
+        if (!feed) return [];
+        if (filterCategory === "all") return feed.items;
+        return feed.items.filter(item => {
+            if (filterCategory === "video") return item.type === 'video';
+            if (filterCategory === "reddit") return item.type === 'reddit';
+            if (filterCategory === "gaming") return item.type === 'game' || item.category === 'gaming';
+            if (filterCategory === "facts") return item.type === 'fact' || item.type === 'recommendation';
+            if (filterCategory === "news") return item.type === 'article';
+            return item.category === filterCategory;
+        });
     };
 
-    // Filtrar items por categoría
-    const allFilteredItems = feed?.items.filter(item =>
-        filterCategory === "all" || item.category === filterCategory
-    ) || [];
+    const filteredItems = getFilteredItems().slice(0, displayedCount);
+    const allCount = getFilteredItems().length;
 
-    // Mostrar solo los primeros N items
-    const filteredItems = allFilteredItems.slice(0, displayedCount);
-
-    const categories = ["all", "news", "gaming", "tech", "music", "sports", "community", "events"];
+    const categories = [
+        { id: "all", label: "Todo", icon: "🌐" },
+        { id: "news", label: "Noticias", icon: "📰" },
+        { id: "video", label: "Videos", icon: "🎬" },
+        { id: "reddit", label: "Comunidad", icon: "💬" },
+        { id: "gaming", label: "Gaming", icon: "🎮" },
+        { id: "facts", label: "Descubre", icon: "💡" },
+    ];
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+        <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
             <GlobalHeader />
 
             {/* Onboarding prompt */}
@@ -142,8 +149,7 @@ export default function FeedPage() {
                         <Sparkles className="w-14 h-14 text-indigo-400 mx-auto" />
                         <h2 className="text-2xl font-bold text-white">Configura tu perfil</h2>
                         <p className="text-gray-400">
-                            Para ver tu feed personalizado necesitas seleccionar tus intereses y ubicación.
-                            Solo toma 2 minutos.
+                            Selecciona tus intereses para ver contenido personalizado: noticias, videos, gaming, música y más.
                         </p>
                         <button
                             onClick={() => router.push("/onboarding")}
@@ -157,227 +163,328 @@ export default function FeedPage() {
 
             {/* Main feed */}
             {!needsOnboarding && (
-                <div className="container mx-auto px-4 py-8">
-                    {/* Info del feed */}
+                <div className="max-w-3xl mx-auto px-4 py-4 sm:py-6">
+                    {/* Feed header */}
                     {feed && (
-                        <div className="mb-8 p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
-                            <div className="flex items-center justify-between flex-wrap gap-4">
-                                <div className="flex items-center gap-6">
-                                    <div className="flex items-center gap-2 text-gray-300">
-                                        <MapPin className="w-5 h-5 text-indigo-400" />
-                                        <span className="font-semibold">{feed.userLocation}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-gray-300">
-                                        <Sparkles className="w-5 h-5 text-purple-400" />
-                                        <span>{feed.totalSources} fuentes consultadas</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-gray-300">
-                                        <TrendingUp className="w-5 h-5 text-green-400" />
-                                        <span>{filteredItems.length} resultados</span>
-                                    </div>
+                        <div className="mb-4 sm:mb-6 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-1.5 text-gray-400 text-sm">
+                                    <MapPin className="w-4 h-4 text-indigo-400" />
+                                    <span className="font-medium text-gray-300">{feed.userLocation}</span>
                                 </div>
-                                <div className="text-sm text-gray-400">
-                                    Última actualización: {new Date(feed.generatedAt).toLocaleTimeString('es-ES')}
-                                </div>
+                                <span className="text-gray-600">•</span>
+                                <span className="text-gray-500 text-sm">{feed.totalSources} fuentes</span>
                             </div>
+                            <button
+                                onClick={refreshFeed}
+                                disabled={isRefreshing}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition"
+                            >
+                                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                                <span className="hidden sm:inline">Actualizar</span>
+                            </button>
                         </div>
                     )}
 
-                    {/* Filtros de categoría */}
-                    <div className="mb-6 flex gap-3 overflow-x-auto pb-2">
+                    {/* Category filters — scrollable on mobile */}
+                    <div className="mb-4 sm:mb-6 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                         {categories.map(cat => (
                             <button
-                                key={cat}
-                                onClick={() => setFilterCategory(cat)}
-                                className={`px-4 py-2 rounded-full whitespace-nowrap transition ${filterCategory === cat
-                                    ? 'bg-indigo-600 text-white'
-                                    : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                                key={cat.id}
+                                onClick={() => { setFilterCategory(cat.id); setDisplayedCount(15); }}
+                                className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-full whitespace-nowrap text-sm transition-all ${filterCategory === cat.id
+                                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                                        : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-300'
                                     }`}
                             >
-                                {cat === "all" ? "Todo" : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                                <span>{cat.icon}</span>
+                                <span>{cat.label}</span>
                             </button>
                         ))}
                     </div>
 
-                    {/* Loading state */}
+                    {/* Loading */}
                     {isLoading && (
                         <div className="flex flex-col items-center justify-center py-20">
-                            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-500 mb-4"></div>
-                            <p className="text-gray-300 text-lg">Generando tu feed personalizado con IA...</p>
-                            <p className="text-gray-500 text-sm mt-2">Esto puede tomar unos segundos</p>
+                            <div className="relative w-16 h-16 mb-4">
+                                <div className="absolute inset-0 rounded-full border-2 border-indigo-500/20"></div>
+                                <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-indigo-500 animate-spin"></div>
+                                <Sparkles className="absolute inset-0 m-auto w-6 h-6 text-indigo-400 animate-pulse" />
+                            </div>
+                            <p className="text-gray-300 text-lg font-medium">Generando tu feed...</p>
+                            <p className="text-gray-500 text-sm mt-1">Videos, noticias, gaming, música y más</p>
                         </div>
                     )}
 
-                    {/* Error state */}
+                    {/* Error */}
                     {error && (
-                        <div className="p-6 bg-red-500/20 border border-red-500 rounded-xl text-center">
-                            <p className="text-red-200 mb-4">{error}</p>
-                            <button
-                                onClick={loadFeed}
-                                className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-                            >
+                        <div className="p-6 bg-red-500/10 border border-red-500/30 rounded-xl text-center">
+                            <p className="text-red-300 mb-4">{error}</p>
+                            <button onClick={loadFeed} className="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
                                 Intentar de nuevo
                             </button>
                         </div>
                     )}
 
-                    {/* Feed Grid */}
+                    {/* Feed items — single column like TikTok/Twitter */}
                     {!isLoading && !error && filteredItems.length > 0 && (
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="space-y-4">
                             {filteredItems.map(item => (
                                 <FeedCard key={item.id} item={item} />
                             ))}
                         </div>
                     )}
 
-                    {/* Empty state */}
+                    {/* Empty */}
                     {!isLoading && !error && filteredItems.length === 0 && (
-                        <div className="text-center py-20">
-                            <Sparkles className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                            <h3 className="text-xl font-bold text-gray-300 mb-2">
-                                No encontramos contenido para esta categoría
-                            </h3>
-                            <p className="text-gray-500 mb-6">
-                                Intenta con otra categoría o actualiza tus intereses
-                            </p>
-                            <Link
-                                href="/settings"
-                                className="inline-block px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-                            >
-                                Editar Intereses
-                            </Link>
+                        <div className="text-center py-16">
+                            <Globe className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                            <h3 className="text-lg font-bold text-gray-300 mb-2">Sin contenido en esta categoría</h3>
+                            <button onClick={() => setFilterCategory("all")} className="text-indigo-400 hover:text-indigo-300 text-sm">
+                                Ver todo el contenido →
+                            </button>
                         </div>
                     )}
 
-                    {/* Loading More */}
-                    {!isLoading && !error && isLoadingMore && (
-                        <div className="flex justify-center py-8">
-                            <div className="flex items-center gap-3 text-gray-400">
-                                <RefreshCw className="w-5 h-5 animate-spin" />
-                                <span>Cargando más contenido...</span>
+                    {/* Loading more */}
+                    {isLoadingMore && (
+                        <div className="flex justify-center py-6">
+                            <div className="flex items-center gap-2 text-gray-500 text-sm">
+                                <RefreshCw className="w-4 h-4 animate-spin" />
+                                <span>Cargando más...</span>
                             </div>
                         </div>
                     )}
 
-                    {/* End of results */}
-                    {!isLoading && !error && filteredItems.length > 0 && displayedCount >= allFilteredItems.length && (
-                        <div className="text-center py-8 text-gray-500">
-                            <p>Has visto todo el contenido disponible 🎉</p>
-                            <p className="text-sm mt-2">Total: {allFilteredItems.length} items</p>
+                    {/* End of feed */}
+                    {!isLoading && !error && filteredItems.length > 0 && displayedCount >= allCount && (
+                        <div className="text-center py-8 text-gray-600 text-sm">
+                            Has visto todo 🎉 · {allCount} items
                         </div>
                     )}
                 </div>
+            )}
+
+            {/* Scroll to top button */}
+            {showScrollTop && (
+                <button
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    className="fixed bottom-6 right-6 p-3 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition-all hover:scale-110 z-50"
+                >
+                    <ArrowUp className="w-5 h-5" />
+                </button>
             )}
         </div>
     );
 }
 
-// Componente para cada card del feed
+// ====== FEED CARD COMPONENT ======
 function FeedCard({ item }: { item: ContentItem }) {
-    const getIcon = (category: string) => {
-        switch (category) {
-            case "events": return <Calendar className="w-5 h-5" />;
-            case "community": return <Users className="w-5 h-5" />;
-            case "news": return <TrendingUp className="w-5 h-5" />;
-            case "gaming": return <Sparkles className="w-5 h-5 text-purple-400" />;
-            case "music": return <Calendar className="w-5 h-5 text-pink-400" />;
-            case "tech": return <Sparkles className="w-5 h-5 text-blue-400" />;
-            case "sports": return <TrendingUp className="w-5 h-5 text-green-400" />;
-            default: return <Sparkles className="w-5 h-5" />;
-        }
-    };
-
-    const getDistanceBadge = (distance?: number) => {
-        if (!distance) return null;
-
-        let color = "bg-green-500";
-        let label = "Muy cerca";
-
-        if (distance > 50) {
-            color = "bg-yellow-500";
-            label = "Región";
-        } else if (distance > 200) {
-            color = "bg-orange-500";
-            label = "Nacional";
-        } else if (distance > 1000) {
-            color = "bg-red-500";
-            label = "Global";
-        }
-
-        return (
-            <div className={`${color} text-white text-xs px-3 py-1 rounded-full flex items-center gap-1`}>
-                <MapPin className="w-3 h-3" />
-                {distance < 1000 ? `${Math.round(distance)}km` : label}
-            </div>
-        );
-    };
+    const [showEmbed, setShowEmbed] = useState(false);
 
     const formatDate = (dateStr: string) => {
-        const date = new Date(dateStr);
-        const now = new Date();
-        const diffHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+        try {
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diffMs = now.getTime() - date.getTime();
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
 
-        if (diffHours < 1) return "Hace menos de 1 hora";
-        if (diffHours < 24) return `Hace ${diffHours} horas`;
-        if (diffHours < 48) return "Ayer";
-        return date.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
+            if (diffMins < 60) return `hace ${diffMins}m`;
+            if (diffHours < 24) return `hace ${diffHours}h`;
+            if (diffDays < 7) return `hace ${diffDays}d`;
+            return date.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
+        } catch {
+            return '';
+        }
     };
 
+    const formatNumber = (n?: number) => {
+        if (!n) return '';
+        if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+        if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+        return n.toString();
+    };
+
+    const getTypeIcon = () => {
+        switch (item.type) {
+            case 'video': return <Play className="w-4 h-4" />;
+            case 'reddit': return <MessageSquare className="w-4 h-4" />;
+            case 'game': return <Gamepad2 className="w-4 h-4" />;
+            case 'fact': return <Lightbulb className="w-4 h-4" />;
+            case 'recommendation': return <Target className="w-4 h-4" />;
+            case 'article': return <Newspaper className="w-4 h-4" />;
+            default: return <Globe className="w-4 h-4" />;
+        }
+    };
+
+    const getTypeColor = () => {
+        switch (item.type) {
+            case 'video': return 'text-red-400 bg-red-500/10';
+            case 'reddit': return 'text-orange-400 bg-orange-500/10';
+            case 'game': return 'text-purple-400 bg-purple-500/10';
+            case 'fact': return 'text-yellow-400 bg-yellow-500/10';
+            case 'recommendation': return 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20';
+            case 'article': return 'text-blue-400 bg-blue-500/10';
+            default: return 'text-gray-400 bg-gray-500/10';
+        }
+    };
+
+    const getTypeBadge = () => {
+        switch (item.type) {
+            case 'video': return 'Video';
+            case 'reddit': return `r/${item.subreddit || 'popular'}`;
+            case 'game': return 'Gaming';
+            case 'fact': return 'Dato curioso';
+            case 'recommendation': return '🎯 Descubre';
+            case 'article': return 'Artículo';
+            default: return item.source;
+        }
+    };
+
+    // Recommendation cards have special design
+    if (item.type === 'recommendation') {
+        return (
+            <div className="relative overflow-hidden rounded-xl border border-emerald-500/30 bg-gradient-to-br from-emerald-900/20 to-teal-900/20 p-5 sm:p-6">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+                <div className="flex items-center gap-2 mb-3">
+                    <div className="p-1.5 bg-emerald-500/20 rounded-lg">
+                        <Target className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <span className="text-emerald-400 text-xs font-bold uppercase tracking-wider">Descubre algo nuevo</span>
+                </div>
+                <h3 className="text-white font-bold text-lg mb-2">{item.icon} {item.title}</h3>
+                <p className="text-gray-300 text-sm mb-3">{item.description}</p>
+                {item.reason && (
+                    <p className="text-emerald-400/70 text-xs italic mb-3">💡 {item.reason}</p>
+                )}
+                <a href={item.url} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm text-emerald-400 hover:text-emerald-300 transition font-medium">
+                    Explorar más <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+            </div>
+        );
+    }
+
+    // Fact cards
+    if (item.type === 'fact') {
+        return (
+            <div className="rounded-xl border border-yellow-500/20 bg-gradient-to-br from-yellow-900/10 to-orange-900/10 p-5 sm:p-6">
+                <div className="flex items-center gap-2 mb-3">
+                    <Lightbulb className="w-4 h-4 text-yellow-400" />
+                    <span className="text-yellow-400 text-xs font-bold uppercase tracking-wider">Dato curioso</span>
+                </div>
+                <h3 className="text-white font-bold text-lg mb-2">{item.icon} {item.title}</h3>
+                <p className="text-gray-300 text-sm leading-relaxed">{item.description}</p>
+                <div className="mt-3 text-gray-500 text-xs">{item.source}</div>
+            </div>
+        );
+    }
+
+    // Standard card (articles, videos, reddit, games)
     return (
-        <a
-            href={item.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group block bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:border-indigo-500 transition-all hover:scale-105 overflow-hidden"
-        >
-            {/* Imagen (si existe) */}
-            {item.imageUrl && (
-                <div className="aspect-video bg-gray-800 overflow-hidden">
-                    <img
-                        src={item.imageUrl}
-                        alt={item.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
+        <div className="group rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/10 transition-all overflow-hidden">
+            {/* Image/Thumbnail */}
+            {(item.imageUrl || item.thumbnailUrl) && (
+                <div className="relative aspect-video bg-gray-900 overflow-hidden cursor-pointer"
+                    onClick={() => {
+                        if (item.type === 'video' && item.embedUrl) {
+                            setShowEmbed(!showEmbed);
+                        } else {
+                            window.open(item.url, '_blank');
+                        }
+                    }}>
+                    {showEmbed && item.embedUrl ? (
+                        <iframe
+                            src={item.embedUrl + '?autoplay=1'}
+                            className="w-full h-full"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                        />
+                    ) : (
+                        <>
+                            <img
+                                src={item.thumbnailUrl || item.imageUrl || ''}
+                                alt={item.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                            />
+                            {/* Video play overlay */}
+                            {item.type === 'video' && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition">
+                                    <div className="w-14 h-14 bg-red-600 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition">
+                                        <Play className="w-7 h-7 text-white ml-1" fill="white" />
+                                    </div>
+                                </div>
+                            )}
+                            {/* Duration badge */}
+                            {item.duration && (
+                                <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-1.5 py-0.5 rounded">
+                                    {item.duration}
+                                </div>
+                            )}
+                        </>
+                    )}
                 </div>
             )}
 
-            <div className="p-5">
-                {/* Header con badges */}
-                <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                    <div className="flex items- center gap-2 text-indigo-400">
-                        {getIcon(item.category)}
-                        <span className="text-xs uppercase font-semibold">{item.category}</span>
+            {/* Content */}
+            <div className="p-4 sm:p-5">
+                {/* Type badge + source */}
+                <div className="flex items-center gap-2 mb-2.5 flex-wrap">
+                    <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getTypeColor()}`}>
+                        {getTypeIcon()}
+                        <span>{getTypeBadge()}</span>
                     </div>
-                    {item.location && (
-                        <div className={`${item.location.distance === 0 ? 'bg-green-500' :
-                            item.location.distance < 100 ? 'bg-yellow-500' :
-                                item.location.distance < 500 ? 'bg-orange-500' :
-                                    'bg-gray-500'
-                            } text-white text-xs px-3 py-1 rounded-full flex items-center gap-1`}>
+                    {item.location && item.location.distance === 0 && (
+                        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-500/10 text-green-400">
                             <MapPin className="w-3 h-3" />
-                            {item.location.city}
+                            <span>Local</span>
                         </div>
                     )}
                 </div>
 
-                {/* Título */}
-                <h3 className="text-white font-bold text-lg mb-2 line-clamp-2 group-hover:text-indigo-400 transition">
-                    {item.title}
-                </h3>
+                {/* Title */}
+                <a href={item.url} target="_blank" rel="noopener noreferrer">
+                    <h3 className="text-white font-semibold text-base sm:text-lg mb-1.5 line-clamp-2 hover:text-indigo-400 transition cursor-pointer">
+                        {item.title}
+                    </h3>
+                </a>
 
-                {/* Descripción */}
-                <p className="text-gray-400 text-sm mb-4 line-clamp-3">
-                    {item.description}
-                </p>
+                {/* Description */}
+                {item.description && (
+                    <p className="text-gray-400 text-sm mb-3 line-clamp-2">
+                        {item.description}
+                    </p>
+                )}
 
                 {/* Footer */}
-                <div className="flex items-center justify-between pt-3 border-t border-white/10">
-                    <div className="text-xs text-gray-500">
-                        {item.source} • {formatDate(item.publishedAt)}
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                    <div className="flex items-center gap-3">
+                        <span>{item.source}</span>
+                        <span>{formatDate(item.publishedAt)}</span>
                     </div>
-                    <ExternalLink className="w-4 h-4 text-gray-500 group-hover:text-indigo-400 transition" />
+                    <div className="flex items-center gap-3">
+                        {item.score !== undefined && item.score > 0 && (
+                            <span className="flex items-center gap-1">
+                                <ArrowUp className="w-3 h-3" /> {formatNumber(item.score)}
+                            </span>
+                        )}
+                        {item.numComments !== undefined && item.numComments > 0 && (
+                            <span className="flex items-center gap-1">
+                                <MessageSquare className="w-3 h-3" /> {formatNumber(item.numComments)}
+                            </span>
+                        )}
+                        {item.interactionCount !== undefined && item.interactionCount > 0 && item.type === 'video' && (
+                            <span>{formatNumber(item.interactionCount)} views</span>
+                        )}
+                        <a href={item.url} target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition">
+                            <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                    </div>
                 </div>
             </div>
-        </a>
+        </div>
     );
 }
