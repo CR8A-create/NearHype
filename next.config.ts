@@ -9,6 +9,17 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
+  // Redirect www to non-www (Clerk cookies are set on nearhype.com)
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.nearhype.com" }],
+        destination: "https://nearhype.com/:path*",
+        permanent: true,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {
