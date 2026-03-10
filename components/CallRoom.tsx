@@ -16,6 +16,17 @@ const ICE_SERVERS = [
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
     { urls: "stun:stun.cloudflare.com:3478" },
+    // TURN servers for NAT traversal (free tier)
+    {
+        urls: "turn:openrelay.metered.ca:80",
+        username: "openrelayproject",
+        credential: "openrelayproject",
+    },
+    {
+        urls: "turn:openrelay.metered.ca:443",
+        username: "openrelayproject",
+        credential: "openrelayproject",
+    },
 ];
 
 type CallStatus = "loading" | "connecting" | "connected" | "ended" | "error";
@@ -130,6 +141,7 @@ export default function CallRoom({ roomId }: CallRoomProps) {
             }
 
             if (!data.isCaller) {
+                // Callee joins the call
                 await fetch(`/api/calls/${roomId}`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -139,6 +151,33 @@ export default function CallRoom({ roomId }: CallRoomProps) {
 
             createPeerConnection(stream, data.isCaller, data.currentUserId);
             startSignalPolling();
+
+            // If caller, wait for callee to join before creating offer
+            if (data.isCaller && data.room.status === "ringing") {
+                // Poll until callee joins (status becomes "active")
+                const waitForCallee = setInterval(async () => {
+                    try {
+                        const checkRes = await fetch(`/api/calls/${roomId}`);
+                        if (checkRes.ok) {
+                            const checkData = await checkRes.json();
+                            if (checkData.room.status === "active") {
+                                clearInterval(waitForCallee);
+                                // Now create the offer
+                                const pc = peerConnectionRef.current;
+                                if (pc && !hasInitiatedRef.current) {
+                                    hasInitiatedRef.current = true;
+                                    createOffer(pc, false);
+                                }
+                            } else if (checkData.room.status === "rejected" || checkData.room.status === "ended" || checkData.room.status === "missed") {
+                                clearInterval(waitForCallee);
+                                setStatus("ended");
+                            }
+                        }
+                    } catch { /* retry */ }
+                }, 1000);
+                // Timeout after 30s
+                setTimeout(() => clearInterval(waitForCallee), 30000);
+            }
 
         } catch {
             setError("unknown");
@@ -194,9 +233,10 @@ export default function CallRoom({ roomId }: CallRoomProps) {
             }
         };
 
-        if (amICaller && !hasInitiatedRef.current) {
-            hasInitiatedRef.current = true;
-            setTimeout(() => createOffer(pc, false), 1000);
+        // For callee: create offer immediately when peer connection is ready
+        // For caller: offer is created after callee joins (see initCall)
+        if (!amICaller && !hasInitiatedRef.current) {
+            // Callee doesn't create offer; they wait for caller's offer via signals
         }
     };
 
@@ -214,7 +254,7 @@ export default function CallRoom({ roomId }: CallRoomProps) {
             const offer = await pc.createOffer(isRestart ? { iceRestart: true } : {});
             await pc.setLocalDescription(offer);
             await sendSignal("offer", offer);
-        } catch { /* ignore */ }
+        } catch (err) { console.error('Error creating offer:', err); }
     };
 
     const sendSignal = async (signalType: string, signalData: unknown) => {
@@ -256,10 +296,13 @@ export default function CallRoom({ roomId }: CallRoomProps) {
                     processedSignalsRef.current.add(signal.id);
                     await handleSignal(pc, signal);
                 }
-            } catch { /* ignore */ }
+            } catch (err) { console.error('Signal polling error:', err); }
         };
 
-        pollingRef.current = setInterval(poll, 2000);
+        // Poll every 800ms for faster signaling (was 2000ms)
+        pollingRef.current = setInterval(poll, 800);
+        // Also run immediately
+        poll();
     };
 
     const handleSignal = async (pc: RTCPeerConnection, signal: { signalType: string; signalData: unknown }) => {
