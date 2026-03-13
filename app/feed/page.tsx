@@ -6,14 +6,14 @@ import { useRouter } from "next/navigation";
 import {
     MapPin, Sparkles, RefreshCw, TrendingUp,
     ExternalLink, Play, MessageSquare, Gamepad2,
-    Lightbulb, Target, Newspaper, Music, Globe, ArrowUp
+    Lightbulb, Target, Newspaper, Music, Globe, ArrowUp, Users, Calendar
 } from "lucide-react";
 import Link from "next/link";
 import GlobalHeader from "@/components/GlobalHeader";
 
 type ContentItem = {
     id: string;
-    type: 'article' | 'video' | 'music' | 'image' | 'game' | 'fact' | 'recommendation' | 'reddit';
+    type: 'article' | 'video' | 'music' | 'image' | 'game' | 'fact' | 'recommendation' | 'reddit' | 'community_post' | 'event';
     title: string;
     description: string;
     url: string;
@@ -34,6 +34,13 @@ type ContentItem = {
     subreddit?: string;
     score?: number;
     numComments?: number;
+    // Community post fields
+    author?: string;
+    community?: string;
+    communitySlug?: string;
+    // Event fields
+    startDate?: string;
+    eventLocation?: string;
 };
 
 type FeedResponse = {
@@ -119,6 +126,8 @@ export default function FeedPage() {
         return feed.items.filter(item => {
             if (filterCategory === "video") return item.type === 'video';
             if (filterCategory === "reddit") return item.type === 'reddit';
+            if (filterCategory === "events") return item.type === 'event';
+            if (filterCategory === "community") return item.type === 'community_post';
             if (filterCategory === "gaming") return item.type === 'game' || item.category === 'gaming';
             if (filterCategory === "facts") return item.type === 'fact' || item.type === 'recommendation';
             if (filterCategory === "news") return item.type === 'article';
@@ -132,8 +141,10 @@ export default function FeedPage() {
     const categories = [
         { id: "all", label: "Todo", icon: "🌐" },
         { id: "news", label: "Noticias", icon: "📰" },
+        { id: "events", label: "Eventos", icon: "📅" },
+        { id: "community", label: "NearHype", icon: "👥" },
         { id: "video", label: "Videos", icon: "🎬" },
-        { id: "reddit", label: "Comunidad", icon: "💬" },
+        { id: "reddit", label: "Reddit", icon: "💬" },
         { id: "gaming", label: "Gaming", icon: "🎮" },
         { id: "facts", label: "Descubre", icon: "💡" },
     ];
@@ -278,6 +289,15 @@ export default function FeedPage() {
     );
 }
 
+// Fire-and-forget: POST item category to increment relevanceWeight
+function trackInterestClick(category: string): void {
+    fetch("/api/user/interests/weight", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic: category, action: "click" }),
+    }).catch(() => {});
+}
+
 // ====== FEED CARD COMPONENT ======
 function FeedCard({ item }: { item: ContentItem }) {
     const [showEmbed, setShowEmbed] = useState(false);
@@ -315,6 +335,8 @@ function FeedCard({ item }: { item: ContentItem }) {
             case 'fact': return <Lightbulb className="w-4 h-4" />;
             case 'recommendation': return <Target className="w-4 h-4" />;
             case 'article': return <Newspaper className="w-4 h-4" />;
+            case 'community_post': return <Users className="w-4 h-4" />;
+            case 'event': return <Calendar className="w-4 h-4" />;
             default: return <Globe className="w-4 h-4" />;
         }
     };
@@ -327,6 +349,8 @@ function FeedCard({ item }: { item: ContentItem }) {
             case 'fact': return 'text-yellow-400 bg-yellow-500/10';
             case 'recommendation': return 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20';
             case 'article': return 'text-blue-400 bg-blue-500/10';
+            case 'community_post': return 'text-violet-400 bg-violet-500/10';
+            case 'event': return 'text-green-400 bg-green-500/10';
             default: return 'text-gray-400 bg-gray-500/10';
         }
     };
@@ -339,6 +363,8 @@ function FeedCard({ item }: { item: ContentItem }) {
             case 'fact': return 'Dato curioso';
             case 'recommendation': return '🎯 Descubre';
             case 'article': return 'Artículo';
+            case 'community_post': return `👥 ${item.community || 'Comunidad'}`;
+            case 'event': return '📅 Evento';
             default: return item.source;
         }
     };
@@ -360,6 +386,7 @@ function FeedCard({ item }: { item: ContentItem }) {
                     <p className="text-emerald-400/70 text-xs italic mb-3">💡 {item.reason}</p>
                 )}
                 <a href={item.url} target="_blank" rel="noopener noreferrer"
+                    onClick={() => trackInterestClick(item.category)}
                     className="inline-flex items-center gap-1.5 text-sm text-emerald-400 hover:text-emerald-300 transition font-medium">
                     Explorar más <ExternalLink className="w-3.5 h-3.5" />
                 </a>
@@ -382,6 +409,121 @@ function FeedCard({ item }: { item: ContentItem }) {
         );
     }
 
+    // Community post cards — glassmorphism blue/purple style
+    if (item.type === 'community_post') {
+        return (
+            <Link href={item.url} className="block" onClick={() => trackInterestClick(item.category)}>
+                <div className="relative overflow-hidden rounded-xl border border-violet-500/30 bg-gradient-to-br from-violet-900/20 via-indigo-900/15 to-blue-900/20 backdrop-blur-sm p-5 sm:p-6 hover:border-violet-400/40 hover:from-violet-900/30 hover:via-indigo-900/25 hover:to-blue-900/30 transition-all group">
+                    <div className="absolute top-0 right-0 w-40 h-40 bg-violet-500/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+
+                    {/* Header: community badge */}
+                    <div className="flex items-center gap-2 mb-3">
+                        <div className="p-1.5 bg-violet-500/20 rounded-lg">
+                            <Users className="w-4 h-4 text-violet-400" />
+                        </div>
+                        <span className="text-violet-400 text-xs font-bold uppercase tracking-wider">{item.community || 'Comunidad'}</span>
+                    </div>
+
+                    {/* Title */}
+                    <h3 className="text-white font-bold text-lg mb-2 group-hover:text-violet-300 transition-colors line-clamp-2">
+                        {item.title}
+                    </h3>
+
+                    {/* Content preview */}
+                    {item.description && (
+                        <p className="text-gray-300/80 text-sm mb-4 line-clamp-3 leading-relaxed">
+                            {item.description.slice(0, 150)}{item.description.length > 150 ? '...' : ''}
+                        </p>
+                    )}
+
+                    {/* Footer: author, time, interactions */}
+                    <div className="flex items-center justify-between text-xs text-gray-400">
+                        <div className="flex items-center gap-2">
+                            <span className="text-violet-400/80">@{item.author}</span>
+                            <span className="text-gray-600">·</span>
+                            <span>{formatDate(item.publishedAt)}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            {(item.score ?? 0) > 0 && (
+                                <span className="flex items-center gap-1 text-violet-400/70">
+                                    <ArrowUp className="w-3 h-3" /> {formatNumber(item.score)}
+                                </span>
+                            )}
+                            {(item.numComments ?? 0) > 0 && (
+                                <span className="flex items-center gap-1 text-violet-400/70">
+                                    <MessageSquare className="w-3 h-3" /> {formatNumber(item.numComments)}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </Link>
+        );
+    }
+
+    // Event card — glassmorphism green accent
+    if (item.type === 'event') {
+        const formatEventDate = (dateStr?: string) => {
+            if (!dateStr) return null;
+            try {
+                const d = new Date(dateStr);
+                return d.toLocaleDateString('es-ES', {
+                    weekday: 'short', day: 'numeric', month: 'short',
+                }) + ' · ' + d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+            } catch {
+                return null;
+            }
+        };
+        const eventDate = formatEventDate(item.startDate);
+
+        return (
+            <a href={item.url} target="_blank" rel="noopener noreferrer" className="block"
+                onClick={() => trackInterestClick(item.category)}>
+                <div className="relative overflow-hidden rounded-xl border border-green-500/30 bg-gradient-to-br from-green-900/20 via-emerald-900/15 to-teal-900/20 backdrop-blur-sm p-5 sm:p-6 hover:border-green-400/40 hover:from-green-900/30 transition-all group">
+                    <div className="absolute top-0 right-0 w-40 h-40 bg-green-500/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+
+                    {/* Badge */}
+                    <div className="flex items-center gap-2 mb-3">
+                        <div className="p-1.5 bg-green-500/20 rounded-lg">
+                            <Calendar className="w-4 h-4 text-green-400" />
+                        </div>
+                        <span className="text-green-400 text-xs font-bold uppercase tracking-wider">Evento local</span>
+                        <span className="ml-auto text-xs text-green-500/70">{item.source}</span>
+                    </div>
+
+                    {/* Title */}
+                    <h3 className="text-white font-bold text-lg mb-2 group-hover:text-green-300 transition-colors line-clamp-2">
+                        {item.title}
+                    </h3>
+
+                    {/* Description */}
+                    {item.description && (
+                        <p className="text-gray-300/80 text-sm mb-3 line-clamp-2 leading-relaxed">
+                            {item.description}
+                        </p>
+                    )}
+
+                    {/* Date + Location row */}
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-green-400/80">
+                        {eventDate && (
+                            <span className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                {eventDate}
+                            </span>
+                        )}
+                        {item.eventLocation && (
+                            <span className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3" />
+                                {item.eventLocation}
+                            </span>
+                        )}
+                    </div>
+                </div>
+            </a>
+        );
+    }
+
     // Standard card (articles, videos, reddit, games)
     return (
         <div className="group rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/10 transition-all overflow-hidden">
@@ -392,6 +534,7 @@ function FeedCard({ item }: { item: ContentItem }) {
                         if (item.type === 'video' && item.embedUrl) {
                             setShowEmbed(!showEmbed);
                         } else {
+                            trackInterestClick(item.category);
                             window.open(item.url, '_blank');
                         }
                     }}>
@@ -446,7 +589,8 @@ function FeedCard({ item }: { item: ContentItem }) {
                 </div>
 
                 {/* Title */}
-                <a href={item.url} target="_blank" rel="noopener noreferrer">
+                <a href={item.url} target="_blank" rel="noopener noreferrer"
+                    onClick={() => trackInterestClick(item.category)}>
                     <h3 className="text-white font-semibold text-base sm:text-lg mb-1.5 line-clamp-2 hover:text-indigo-400 transition cursor-pointer">
                         {item.title}
                     </h3>

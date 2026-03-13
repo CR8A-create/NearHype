@@ -1,7 +1,7 @@
 import { getOrCreateUser } from "@/lib/getOrCreateUser";
 import { db } from "@/lib/db";
-import { users, userInterests, userLocations, feedCache } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { users, userInterests, userLocations, feedCache, communityPosts, communities } from "@/lib/db/schema";
+import { eq, desc, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { fetchInterestNews } from "@/lib/apis/newsapi";
 import { fetchWikipediaForInterests } from "@/lib/apis/wikipedia";
@@ -11,11 +11,13 @@ import { searchYouTubeVideos } from "@/lib/apis/youtube";
 import { fetchRedditForInterests } from "@/lib/apis/reddit";
 import { getGamesByInterests } from "@/lib/apis/gaming";
 import { getAIRecommendations, generateFunFacts } from "@/lib/apis/recommendations";
+import { fetchGDELTNews } from "@/lib/apis/gdelt";
+import { fetchLocalEvents } from "@/lib/apis/events";
 
 // ====== ENHANCED CONTENT TYPES ======
 interface ContentItem {
     id: string;
-    type: 'article' | 'video' | 'music' | 'image' | 'game' | 'fact' | 'recommendation' | 'reddit';
+    type: 'article' | 'video' | 'music' | 'image' | 'game' | 'fact' | 'recommendation' | 'reddit' | 'community_post' | 'event';
     title: string;
     description: string;
     url: string;
@@ -37,6 +39,13 @@ interface ContentItem {
     subreddit?: string;
     score?: number;
     numComments?: number;
+    // Community post fields
+    author?: string;
+    community?: string;
+    communitySlug?: string;
+    // Event fields
+    startDate?: string;
+    eventLocation?: string;
 }
 
 // Placeholder images by category
@@ -104,9 +113,17 @@ export async function GET() {
             });
         }
 
-        // Check cache (version 5 = multimedia feed)
-        const CURRENT_API_VERSION = 5;
-        const interests = fullUser.interests.map((i: { topic: string }) => i.topic);
+        // Check cache (version 7 = multimedia feed + GDELT + local events)
+        const CURRENT_API_VERSION = 7;
+        // Read interests WITH weights
+        const weightedInterests = fullUser.interests.map((i: { topic: string; relevanceWeight: number | null }) => ({
+            topic: i.topic,
+            weight: i.relevanceWeight ?? 1.0,
+        }));
+        // Sort by weight descending — highest-weight interests get priority
+        weightedInterests.sort((a, b) => b.weight - a.weight);
+
+        const interests = weightedInterests.map(i => i.topic);
         const cacheKey = generateCacheKey(fullUser.id, interests);
 
         const existingCache = await db.query.feedCache.findFirst({
@@ -119,21 +136,35 @@ export async function GET() {
                 items: existingCache.feedData,
                 generatedAt: existingCache.generatedAt?.toISOString() || new Date().toISOString(),
                 userLocation: fullUser.locations[0].city,
-                totalSources: 7,
+                totalSources: 8,
                 cached: true,
             });
         }
 
-        // ====== PARALLEL CONTENT FETCHING ======
-        console.log(`🎯 Generating multimedia feed for interests: ${interests.join(', ')}`);
+        // ====== COMPUTE WEIGHTED SLOTS ======
+        const avgWeight = weightedInterests.reduce((sum, i) => sum + i.weight, 0) / weightedInterests.length;
+        const BASE_SLOTS = 3; // baseline items per interest
+        const slotsMap = new Map<string, number>();
+        for (const { topic, weight } of weightedInterests) {
+            const slots = Math.max(1, Math.min(5, Math.round(BASE_SLOTS * weight / avgWeight)));
+            slotsMap.set(topic, slots);
+        }
+        console.log(`🎯 Weighted interests: ${weightedInterests.map(i => `${i.topic}(w=${i.weight.toFixed(2)},s=${slotsMap.get(i.topic)})`).join(', ')}`);
 
+        // ====== PARALLEL CONTENT FETCHING ======
         const location = {
             city: fullUser.locations[0].city || "España",
             country: fullUser.locations[0].countryCode || "ES"
         };
 
+        // Top interests (already sorted by weight desc)
         const topInterests = interests.slice(0, 4);
+        const totalNewsSlots = interests.reduce((sum, t) => sum + (slotsMap.get(t) || BASE_SLOTS), 0);
         const allContent: ContentItem[] = [];
+
+        // YouTube: top 2 interests by weight, weighted slots each
+        const ytInterests = topInterests.slice(0, 2);
+        const ytSlots = ytInterests.map(t => slotsMap.get(t) || BASE_SLOTS);
 
         // Fetch all content sources IN PARALLEL for speed
         const [
@@ -145,13 +176,15 @@ export async function GET() {
             funFacts,
             localNews,
             wikiResults,
+            gdeltResults,
+            eventsResults,
         ] = await Promise.allSettled([
-            // 1. News (articles)
-            fetchInterestNews(interests, 15).catch(() => []),
-            // 2. YouTube videos
-            Promise.all(topInterests.slice(0, 2).map(i => searchYouTubeVideos(i, 4))).then(r => r.flat()).catch(() => []),
-            // 3. Reddit posts
-            fetchRedditForInterests(topInterests, 12).catch(() => []),
+            // 1. News (articles) — total slots based on sum of weights
+            fetchInterestNews(interests, Math.min(totalNewsSlots, 20)).catch(() => []),
+            // 2. YouTube videos — weighted slots per interest
+            Promise.all(ytInterests.map((interest, idx) => searchYouTubeVideos(interest, ytSlots[idx] + 1))).then(r => r.flat()).catch(() => []),
+            // 3. Reddit posts — weighted total
+            fetchRedditForInterests(topInterests, Math.min(totalNewsSlots, 15)).catch(() => []),
             // 4. Gaming content
             getGamesByInterests(interests, 6).catch(() => []),
             // 5. AI Recommendations
@@ -160,8 +193,14 @@ export async function GET() {
             generateFunFacts(interests, 4).catch(() => []),
             // 7. Local news
             searchGoogleNewsRSS(`Noticias ${location.city}`, 8).catch(() => []),
-            // 8. Wikipedia
-            fetchWikipediaForInterests(interests).catch(() => []),
+            // 8. Wikipedia — top interests by weight
+            fetchWikipediaForInterests(topInterests).catch(() => []),
+            // 9. GDELT — global event news filtered by interests + user location
+            // NOTE: keywords include city/country for geographic relevance since GDELT has no
+            // native geo-filter; passing them as OR terms alongside interests.
+            fetchGDELTNews([...topInterests, location.city, location.country], "spanish", 10).catch(() => []),
+            // 10. Local events — Eventbrite + Meetup, city-specific
+            fetchLocalEvents(location.city, topInterests, 8).catch(() => []),
         ]);
 
         // ====== PROCESS NEWS ======
@@ -334,14 +373,144 @@ export async function GET() {
             }
         }
 
-        // ====== DEDUPLICATE ======
-        const seen = new Set<string>();
-        const unique = allContent.filter(item => {
-            const key = item.title.toLowerCase().slice(0, 60);
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
-        });
+        // ====== PROCESS GDELT ======
+        // NOTE: gdelt.ts maps article.socialimage to the 'description' field instead of a text
+        // description — this is a quirk of the current implementation. We use item.title as
+        // the visible description and treat item.description as the image URL.
+        if (gdeltResults.status === 'fulfilled') {
+            for (const item of (gdeltResults.value as any[])) {
+                if (!item.title || !item.url) continue;
+                allContent.push({
+                    id: crypto.randomUUID(),
+                    type: 'article',
+                    title: item.title,
+                    // item.description holds the socialimage URL, not text — use title as fallback
+                    description: item.title,
+                    url: item.url,
+                    source: `GDELT · ${item.source}`,
+                    publishedAt: item.publishedAt,
+                    relevanceScore: 72,
+                    category: mapInterestToCategory(topInterests[0] || 'general'),
+                    // item.description is actually the socialimage URL (see gdelt.ts bug note above)
+                    imageUrl: item.description || getPlaceholder('default'),
+                    mediaType: 'link',
+                    location: item.location
+                        ? { city: item.location, distance: 100 }
+                        : { city: location.city, distance: 50 },
+                    icon: '🌍',
+                });
+            }
+        }
+
+        // ====== PROCESS LOCAL EVENTS ======
+        if (eventsResults.status === 'fulfilled') {
+            for (const event of (eventsResults.value as any[])) {
+                if (!event.title || !event.url) continue;
+                allContent.push({
+                    id: event.id || crypto.randomUUID(),
+                    type: 'event',
+                    title: event.title,
+                    description: event.description || '',
+                    url: event.url,
+                    source: event.source,
+                    publishedAt: event.startDate || new Date().toISOString(),
+                    relevanceScore: 88,
+                    category: event.category || mapInterestToCategory(topInterests[0] || 'general'),
+                    imageUrl: event.imageUrl || getPlaceholder('default'),
+                    location: { city: location.city, distance: 0 },
+                    startDate: event.startDate,
+                    eventLocation: event.location,
+                    icon: '📅',
+                });
+            }
+        }
+
+        // ====== FETCH COMMUNITY POSTS ======
+        try {
+            const lowerInterests = interests.map(i => i.toLowerCase());
+            let communityPostsResult = await db
+                .select({
+                    id: communityPosts.id,
+                    title: communityPosts.title,
+                    content: communityPosts.content,
+                    upvotes: communityPosts.upvotes,
+                    commentCount: communityPosts.commentCount,
+                    mediaUrl: communityPosts.mediaUrl,
+                    createdAt: communityPosts.createdAt,
+                    communityName: communities.name,
+                    communitySlug: communities.slug,
+                    communityIcon: communities.iconUrl,
+                    authorUsername: users.username,
+                    authorAvatar: users.avatarUrl,
+                })
+                .from(communityPosts)
+                .innerJoin(communities, eq(communityPosts.communityId, communities.id))
+                .innerJoin(users, eq(communityPosts.userId, users.id))
+                .where(
+                    sql`LOWER(${communities.category}) IN (${sql.join(
+                        lowerInterests.map(i => sql`${i}`), sql`, `
+                    )})`
+                )
+                .orderBy(
+                    desc(sql`(COALESCE(${communityPosts.upvotes}, 0) * 2 + COALESCE(${communityPosts.commentCount}, 0))`)
+                )
+                .limit(10);
+
+            // Fallback: if no matching communities, get top posts from any public community
+            if (communityPostsResult.length === 0) {
+                communityPostsResult = await db
+                    .select({
+                        id: communityPosts.id,
+                        title: communityPosts.title,
+                        content: communityPosts.content,
+                        upvotes: communityPosts.upvotes,
+                        commentCount: communityPosts.commentCount,
+                        mediaUrl: communityPosts.mediaUrl,
+                        createdAt: communityPosts.createdAt,
+                        communityName: communities.name,
+                        communitySlug: communities.slug,
+                        communityIcon: communities.iconUrl,
+                        authorUsername: users.username,
+                        authorAvatar: users.avatarUrl,
+                    })
+                    .from(communityPosts)
+                    .innerJoin(communities, eq(communityPosts.communityId, communities.id))
+                    .innerJoin(users, eq(communityPosts.userId, users.id))
+                    .where(eq(communities.isPublic, true))
+                    .orderBy(
+                        desc(sql`(COALESCE(${communityPosts.upvotes}, 0) * 2 + COALESCE(${communityPosts.commentCount}, 0))`)
+                    )
+                    .limit(5);
+            }
+
+            for (const post of communityPostsResult) {
+                allContent.push({
+                    id: post.id,
+                    type: 'community_post',
+                    title: post.title,
+                    description: post.content?.slice(0, 200) || '',
+                    url: `/communities/${post.communitySlug}`,
+                    source: post.communityName,
+                    publishedAt: post.createdAt?.toISOString() || new Date().toISOString(),
+                    relevanceScore: 88,
+                    category: 'community',
+                    imageUrl: post.mediaUrl || post.communityIcon || undefined,
+                    author: post.authorUsername,
+                    community: post.communityName,
+                    communitySlug: post.communitySlug,
+                    score: post.upvotes || 0,
+                    numComments: post.commentCount || 0,
+                    icon: '👥',
+                });
+            }
+            console.log(`👥 Community posts added: ${communityPostsResult.length}`);
+        } catch (err) {
+            console.error('Error fetching community posts for feed:', err);
+        }
+
+        // ====== ENHANCED DEDUPLICATE ======
+        // Three-tier deduplication: URL → domain+word-similarity → title-prefix
+        const unique = deduplicateItems(allContent);
 
         // ====== DIVERSIFICATION ALGORITHM ======
         // This is the "TikTok/YouTube algorithm" — ensures variety in the feed
@@ -392,13 +561,15 @@ function diversifyFeed(items: ContentItem[], interests: string[]): ContentItem[]
 
     // Build the feed using round-robin with weights
     // Target distribution: 
-    //   30% articles/news, 20% videos, 15% reddit, 15% games/facts, 10% recommendations, 10% other
+    //   25% articles, 20% community_post, 15% videos, 15% reddit, 7.5% games, 7.5% facts, 10% recommendations
     const typeWeights: [string, number][] = [
-        ['article', 3],
-        ['video', 2],
+        ['article', 2.5],
+        ['community_post', 2],
+        ['video', 1.5],
         ['reddit', 1.5],
-        ['game', 1],
-        ['fact', 1],
+        ['event', 1.5],
+        ['game', 0.75],
+        ['fact', 0.75],
         ['recommendation', 1],
     ];
 
@@ -442,4 +613,74 @@ function diversifyFeed(items: ContentItem[], interests: string[]): ContentItem[]
 function generateCacheKey(userId: string, interests: string[]): string {
     const raw = userId + interests.sort().join(',');
     return crypto.createHash('md5').update(raw).digest('hex');
+}
+
+// ====== ENHANCED DEDUPLICATION ======
+function getDomain(url: string): string {
+    try {
+        return new URL(url).hostname.replace('www.', '');
+    } catch {
+        return '';
+    }
+}
+
+function getSignificantWords(text: string): Set<string> {
+    return new Set(
+        text.toLowerCase()
+            .split(/\s+/)
+            .filter(w => w.length >= 4)
+    );
+}
+
+function getWordSimilarity(title1: string, title2: string): number {
+    const words1 = getSignificantWords(title1);
+    const words2 = getSignificantWords(title2);
+    if (words1.size === 0 && words2.size === 0) return 1;
+    if (words1.size === 0 || words2.size === 0) return 0;
+
+    let shared = 0;
+    for (const w of words1) {
+        if (words2.has(w)) shared++;
+    }
+
+    // Jaccard-style: shared / total unique words
+    const totalUnique = new Set([...words1, ...words2]).size;
+    return totalUnique > 0 ? shared / totalUnique : 0;
+}
+
+function deduplicateItems(items: ContentItem[]): ContentItem[] {
+    const seenUrls = new Set<string>();
+    const seenTitlePrefixes = new Set<string>();
+    const kept: ContentItem[] = [];
+
+    for (const item of items) {
+        // Tier 1: Exact URL match
+        const normalizedUrl = item.url.toLowerCase().replace(/\/+$/, '');
+        if (seenUrls.has(normalizedUrl)) continue;
+
+        // Tier 2: Same domain + word similarity > 70%
+        const domain = getDomain(item.url);
+        let isDomainDupe = false;
+        if (domain) {
+            for (const existing of kept) {
+                if (getDomain(existing.url) === domain) {
+                    if (getWordSimilarity(item.title, existing.title) > 0.7) {
+                        isDomainDupe = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if (isDomainDupe) continue;
+
+        // Tier 3: Title prefix (original 60-char check)
+        const titleKey = item.title.toLowerCase().slice(0, 60);
+        if (seenTitlePrefixes.has(titleKey)) continue;
+
+        seenUrls.add(normalizedUrl);
+        seenTitlePrefixes.add(titleKey);
+        kept.push(item);
+    }
+
+    return kept;
 }

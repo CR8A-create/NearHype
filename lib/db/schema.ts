@@ -584,6 +584,28 @@ export type NewDmMessage = typeof dmMessages.$inferInsert;
 export type ProfileSwipe = typeof profileSwipes.$inferSelect;
 export type NewProfileSwipe = typeof profileSwipes.$inferInsert;
 
+// ====== LOCAL EVENTS ======
+export const localEvents = pgTable('local_events', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    title: text('title').notNull(),
+    description: text('description'),
+    url: text('url').notNull(),
+    imageUrl: text('image_url'),
+    location: text('location'),
+    city: text('city'),
+    countryCode: varchar('country_code', { length: 2 }),
+    startDate: timestamp('start_date'),
+    endDate: timestamp('end_date'),
+    category: varchar('category', { length: 100 }),
+    source: varchar('source', { length: 50 }),
+    externalId: text('external_id').unique(),
+    createdAt: timestamp('created_at').defaultNow(),
+    expiresAt: timestamp('expires_at'),
+});
+
+export type LocalEvent = typeof localEvents.$inferSelect;
+export type NewLocalEvent = typeof localEvents.$inferInsert;
+
 // ====== CALL ROOMS ======
 export const callRooms = pgTable("call_rooms", {
     id: uuid("id").primaryKey().defaultRandom(),

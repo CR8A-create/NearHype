@@ -18,18 +18,23 @@ interface GameItem {
 /**
  * Search for games related to user interests
  * Uses RAWG API (free tier: 20,000 requests/month)
- * No API key needed for basic requests
+ * Requires RAWG_API_KEY env var — get one free at https://rawg.io/apidocs
  */
 export async function searchGames(query: string, maxResults: number = 5): Promise<GameItem[]> {
+    const apiKey = process.env.RAWG_API_KEY;
+    if (!apiKey) {
+        console.warn('⚠️ RAWG_API_KEY not set — skipping RAWG API, using fallback');
+        return searchGamesAlternative(query, maxResults);
+    }
+
     try {
         const res = await fetch(
-            `https://api.rawg.io/api/games?key=&search=${encodeURIComponent(query)}&page_size=${maxResults}&ordering=-rating`,
+            `https://api.rawg.io/api/games?key=${apiKey}&search=${encodeURIComponent(query)}&page_size=${maxResults}&ordering=-rating`,
             { signal: AbortSignal.timeout(5000) }
         );
 
-        // RAWG requires a key but has a generous free tier
-        // If no key, try without (limited access)
         if (!res.ok) {
+            console.error('RAWG API error:', res.status);
             return await searchGamesAlternative(query, maxResults);
         }
 
