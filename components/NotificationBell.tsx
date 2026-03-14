@@ -44,12 +44,43 @@ export default function NotificationBell() {
         }
     };
 
-    // Polling cada 60 segundos (reducido para evitar rate limits)
+    // Load on mount + SSE for real-time unread count updates
     useEffect(() => {
         loadNotifications();
-        const interval = setInterval(loadNotifications, 60000);
-        return () => clearInterval(interval);
+
+        const esRef = { current: null as EventSource | null };
+        let backoff = 1000;
+
+        const connect = () => {
+            const es = new EventSource('/api/notifications/stream');
+            esRef.current = es;
+
+            es.onopen = () => { backoff = 1000; };
+
+            es.onmessage = (event) => {
+                try {
+                    const { count } = JSON.parse(event.data);
+                    if (typeof count === 'number') setUnreadCount(count);
+                } catch { /* malformed event */ }
+            };
+
+            es.onerror = () => {
+                es.close();
+                esRef.current = null;
+                const delay = backoff;
+                backoff = Math.min(backoff * 2, 30_000);
+                setTimeout(connect, delay);
+            };
+        };
+
+        connect();
+        return () => { esRef.current?.close(); };
     }, []);
+
+    // Refresh full notification list when dropdown opens
+    useEffect(() => {
+        if (showDropdown) loadNotifications();
+    }, [showDropdown]);
 
     // Detectar nueva notificación y reproducir sonido
     useEffect(() => {

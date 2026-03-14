@@ -31,6 +31,9 @@ export default function DMChat({ conversationId, otherUser, currentUserId }: DMC
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const isNearBottomRef = useRef(true);
+    const sinceRef = useRef<Date>(new Date());
+    const esRef = useRef<EventSource | null>(null);
+    const backoffRef = useRef(1000);
 
     const startCall = async (callType: "video" | "audio") => {
         try {
@@ -57,30 +60,75 @@ export default function DMChat({ conversationId, otherUser, currentUserId }: DMC
             container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
     }, []);
 
-    useEffect(() => {
-        loadMessages();
-        const interval = setInterval(loadMessages, 5000); // Poll cada 5s (reducido para evitar rate limits)
-        return () => clearInterval(interval);
+    const connectSSE = useCallback(() => {
+        if (esRef.current) esRef.current.close();
+
+        const since = sinceRef.current.toISOString();
+        const es = new EventSource(
+            `/api/dms/stream?otherUserId=${encodeURIComponent(otherUser.id)}&since=${encodeURIComponent(since)}`
+        );
+        esRef.current = es;
+
+        es.onopen = () => { backoffRef.current = 1000; };
+
+        es.onmessage = (event) => {
+            try {
+                const { messages: newMsgs } = JSON.parse(event.data);
+                if (!newMsgs?.length) return;
+
+                setMessages(prev => {
+                    const existingIds = new Set(prev.map(m => m.id));
+                    const toAdd = newMsgs.filter((m: Message) => !existingIds.has(m.id));
+                    if (toAdd.length === 0) return prev;
+
+                    // Remove optimistic temp messages that match incoming real messages
+                    const incomingKeys = new Set(
+                        toAdd.map((m: Message) => `${m.senderId}:${m.content}`)
+                    );
+                    const cleaned = prev.filter(m =>
+                        !m.id.startsWith('temp-') || !incomingKeys.has(`${m.senderId}:${m.content}`)
+                    );
+
+                    if (isNearBottomRef.current) setTimeout(scrollToBottom, 50);
+                    return [...cleaned, ...toAdd].sort(
+                        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                    );
+                });
+
+                sinceRef.current = new Date(newMsgs[newMsgs.length - 1].createdAt);
+            } catch { /* malformed event */ }
+        };
+
+        es.onerror = () => {
+            es.close();
+            esRef.current = null;
+            const delay = backoffRef.current;
+            backoffRef.current = Math.min(backoffRef.current * 2, 30_000);
+            setTimeout(connectSSE, delay);
+        };
     }, [otherUser.id]);
+
+    useEffect(() => {
+        sinceRef.current = new Date(Date.now() - 2000);
+        loadMessages();
+        connectSSE();
+        return () => {
+            esRef.current?.close();
+            esRef.current = null;
+        };
+    }, [otherUser.id, connectSSE]);
 
     const loadMessages = async () => {
         try {
             const res = await fetch(`/api/dms/${otherUser.id}`);
             const data = await res.json();
             if (data.messages) {
-                setMessages(prev => {
-                    // Solo actualizar si hay cambios reales
-                    if (prev.length !== data.messages.length ||
-                        (prev.length > 0 && data.messages.length > 0 &&
-                            prev[prev.length - 1].id !== data.messages[data.messages.length - 1].id)) {
-                        // Auto-scroll solo si el usuario está cerca del final
-                        if (isNearBottomRef.current) {
-                            setTimeout(scrollToBottom, 50);
-                        }
-                        return data.messages;
-                    }
-                    return prev;
-                });
+                setMessages(data.messages);
+                if (isNearBottomRef.current) setTimeout(scrollToBottom, 50);
+                // Advance since so SSE only fetches new messages after initial history
+                if (data.messages.length > 0) {
+                    sinceRef.current = new Date(data.messages[data.messages.length - 1].createdAt);
+                }
             }
         } catch (error) {
             console.error('Error loading messages:', error);
@@ -127,14 +175,12 @@ export default function DMChat({ conversationId, otherUser, currentUserId }: DMC
                 body: JSON.stringify({ content: messageContent }),
             });
 
-            if (res.ok) {
-                // Recargar mensajes del server para obtener el ID real
-                await loadMessages();
-            } else {
+            if (!res.ok) {
                 // Rollback: eliminar el mensaje optimístico si falló
                 setMessages(prev => prev.filter(m => m.id !== tempId));
                 setNewMessage(messageContent); // Devolver el texto al input
             }
+            // On success: SSE will deliver the real message and replace the temp one
         } catch (error) {
             console.error('Error sending message:', error);
             // Rollback
