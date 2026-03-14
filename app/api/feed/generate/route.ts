@@ -216,7 +216,8 @@ export async function GET() {
                     publishedAt: item.publishedAt,
                     relevanceScore: 65,
                     category: mapInterestToCategory(interests[0] || 'general'),
-                    imageUrl: item.socialimage || getPlaceholder('default'),
+                    // Only use a real image URL — no placeholder fallback for text articles
+                    imageUrl: item.socialimage || undefined,
                     mediaType: 'link',
                     location: { city: 'Global', distance: 5000 },
                 });
@@ -341,13 +342,15 @@ export async function GET() {
                     id: crypto.randomUUID(),
                     type: 'article',
                     title: item.title,
-                    description: item.description,
+                    // Google News RSS sets description = title (no real snippet); leave blank
+                    description: '',
                     url: item.url,
                     source: item.source || 'Local',
                     publishedAt: item.publishedAt,
                     relevanceScore: 95,
                     category: 'news',
-                    imageUrl: getPlaceholder('default'),
+                    // RSS feed carries no images — undefined is better than a repeated placeholder
+                    imageUrl: undefined,
                     location: { city: location.city, distance: 0 },
                     icon: '📍',
                 });
@@ -367,7 +370,8 @@ export async function GET() {
                     publishedAt: new Date().toISOString(),
                     relevanceScore: 50,
                     category: 'knowledge',
-                    imageUrl: item.thumbnail || getPlaceholder('default'),
+                    // wikipedia.ts returns the thumbnail as `socialimage`, not `thumbnail`
+                    imageUrl: item.socialimage || item.thumbnail || undefined,
                     icon: '📖',
                 });
             }
@@ -391,8 +395,9 @@ export async function GET() {
                     publishedAt: item.publishedAt,
                     relevanceScore: 72,
                     category: mapInterestToCategory(topInterests[0] || 'general'),
-                    // item.description is actually the socialimage URL (see gdelt.ts bug note above)
-                    imageUrl: item.description || getPlaceholder('default'),
+                    // item.description from gdelt.ts is `socialimage || title` — only use it as
+                    // imageUrl when it's actually a URL (starts with http), otherwise undefined
+                    imageUrl: item.description?.startsWith('http') ? item.description : undefined,
                     mediaType: 'link',
                     location: item.location
                         ? { city: item.location, distance: 100 }
