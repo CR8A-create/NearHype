@@ -1,16 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { Home, Sparkles, MessageCircle, Settings } from "lucide-react";
+import { Home, Sparkles, MessageCircle, Users } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 interface BottomNavProps {
     unreadMessages?: number;
     pendingRequests?: number;
-    onSettingsClick?: () => void;
 }
 
-export default function BottomNav({ unreadMessages = 0, pendingRequests = 0, onSettingsClick }: BottomNavProps) {
+export default function BottomNav({ unreadMessages = 0, pendingRequests = 0 }: BottomNavProps) {
     const pathname = usePathname();
 
     const isActive = (path: string) => {
@@ -18,6 +17,7 @@ export default function BottomNav({ unreadMessages = 0, pendingRequests = 0, onS
         if (path === '/discover' && pathname === '/discover') return true;
         if (path === '/communities' && pathname.startsWith('/communities')) return true;
         if (path === '/messages' && pathname.startsWith('/messages')) return true;
+        if (path === '/friends' && pathname.startsWith('/friends')) return true;
         return false;
     };
 
@@ -58,20 +58,17 @@ export default function BottomNav({ unreadMessages = 0, pendingRequests = 0, onS
                 <span className="text-[10px] font-medium">Mensajes</span>
             </Link>
 
-            <button
-                onClick={onSettingsClick}
-                className={`flex flex-col items-center justify-center flex-1 py-3 gap-0.5 transition-colors ${pendingRequests > 0 ? 'text-indigo-400' : 'text-gray-500'}`}
-            >
+            <Link href="/friends" className={tabClass('/friends')}>
                 <div className="relative">
-                    <Settings className="w-6 h-6" />
+                    <Users className="w-6 h-6" />
                     {pendingRequests > 0 && (
                         <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
                             {pendingRequests > 99 ? '99+' : pendingRequests}
                         </span>
                     )}
                 </div>
-                <span className="text-[10px] font-medium">Ajustes</span>
-            </button>
+                <span className="text-[10px] font-medium">Amigos</span>
+            </Link>
         </nav>
     );
 }

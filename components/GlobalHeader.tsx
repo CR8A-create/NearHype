@@ -171,7 +171,14 @@ export default function GlobalHeader() {
                         </nav>
 
                         {/* Mobile: key actions */}
-                        <div className="flex md:hidden items-center gap-2">
+                        <div className="flex md:hidden items-center gap-1">
+                            <button
+                                onClick={() => setShowSettingsModal(true)}
+                                className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition"
+                                title="Configuración"
+                            >
+                                <Settings className="w-5 h-5" />
+                            </button>
                             <NotificationBell />
                             {user && (
                                 <UserButton
@@ -210,7 +217,6 @@ export default function GlobalHeader() {
             <BottomNav
                 unreadMessages={unreadMessages}
                 pendingRequests={pendingRequests}
-                onSettingsClick={() => setShowSettingsModal(true)}
             />
 
             {/* Incoming call overlay - Always mounted */}
