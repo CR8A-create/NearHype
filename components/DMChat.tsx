@@ -266,7 +266,7 @@ export default function DMChat({ conversationId, otherUser, currentUserId }: DMC
             </div>
 
             {/* Input */}
-            <form onSubmit={handleSend} className="border-t border-white/10 p-4">
+            <form onSubmit={handleSend} className="border-t border-white/10 p-4 pb-20 md:pb-4">
                 <div className="flex gap-2">
                     <input
                         type="text"

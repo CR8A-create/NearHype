@@ -4,7 +4,9 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { MessageCircle, Loader2, Search, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 import DMChat from "@/components/DMChat";
+import GlobalHeader from "@/components/GlobalHeader";
 
 type Conversation = {
     id: string;
@@ -120,16 +122,27 @@ function MessagesPage() {
     );
 
     return (
-        <div className="h-screen bg-gray-900 flex flex-col md:flex-row">
+        <div className="h-screen flex flex-col bg-gray-900">
+            <GlobalHeader />
+            <div className="flex-1 flex flex-col md:flex-row min-h-0">
             {/* Sidebar - Lista de conversaciones */}
             {/* On mobile: hidden when a conversation is selected */}
             <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} w-full md:w-80 border-r border-white/10 flex-col flex-shrink-0`}>
                 {/* Header */}
                 <div className="p-4 border-b border-white/10">
-                    <h1 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-                        <MessageCircle className="w-6 h-6" />
-                        Mensajes
-                    </h1>
+                    <div className="flex items-center gap-1 mb-4">
+                        <Link
+                            href="/feed"
+                            className="md:hidden min-w-[44px] min-h-[44px] -ml-2 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition"
+                            title="Volver al feed"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                        </Link>
+                        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                            <MessageCircle className="w-6 h-6" />
+                            Mensajes
+                        </h1>
+                    </div>
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
                         <input
@@ -143,7 +156,7 @@ function MessagesPage() {
                 </div>
 
                 {/* Lista de conversaciones */}
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto pb-16 md:pb-0">
                     {isLoading ? (
                         <div className="flex items-center justify-center py-8">
                             <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
@@ -215,10 +228,10 @@ function MessagesPage() {
             {selectedConversation ? (
                 <div className="flex-1 flex flex-col min-h-0">
                     {/* Mobile back button */}
-                    <div className="md:hidden flex items-center gap-3 p-3 border-b border-white/10 bg-gray-900">
+                    <div className="md:hidden flex items-center gap-2 px-2 border-b border-white/10 bg-gray-900 min-h-[56px]">
                         <button
                             onClick={() => setSelectedConversation(null)}
-                            className="p-2 hover:bg-white/10 rounded-full transition text-gray-400 hover:text-white"
+                            className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-white/10 rounded-lg transition text-gray-400 hover:text-white"
                         >
                             <ArrowLeft className="w-5 h-5" />
                         </button>
@@ -249,6 +262,7 @@ function MessagesPage() {
                     </div>
                 </div>
             )}
+            </div>
         </div>
     );
 }
