@@ -42,7 +42,7 @@ export default function RootLayout({
           <link rel="icon" href="/favicon.ico" sizes="any" />
           <link rel="apple-touch-icon" href="/icon-192x192.png" />
         </head>
-        <body className={`${inter.className} antialiased bg-gray-50 dark:bg-gray-900`} suppressHydrationWarning>
+        <body className={`${inter.className} antialiased bg-gray-50 dark:bg-gray-900 pb-16 md:pb-0`} suppressHydrationWarning>
           <ThemeProvider>
             {children}
           </ThemeProvider>

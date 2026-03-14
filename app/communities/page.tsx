@@ -89,7 +89,7 @@ export default function CommunitiesPage() {
                 </div>
 
                 {/* Filtros de categoría */}
-                <div className="mb-8 flex gap-3 overflow-x-auto pb-2 justify-center flex-wrap">
+                <div className="mb-8 flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                     {categories.map(cat => (
                         <button
                             key={cat}
@@ -122,7 +122,7 @@ export default function CommunitiesPage() {
 
                 {/* Grid de comunidades */}
                 {!isLoading && filteredCommunities.length > 0 && (
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
                         {filteredCommunities.map(community => (
                             <CommunityCard key={community.id} community={community} />
                         ))}

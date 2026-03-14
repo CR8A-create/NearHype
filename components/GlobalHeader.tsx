@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin, Sparkles, Home, RefreshCcw, ArrowLeft, Settings, UserPlus, MessageCircle, Menu, X } from "lucide-react";
+import { MapPin, Sparkles, Home, RefreshCcw, ArrowLeft, Settings, UserPlus, MessageCircle } from "lucide-react";
 import { UserButton, useUser } from "@clerk/nextjs";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -10,6 +10,7 @@ import NotificationBell from "./NotificationBell";
 import FriendRequestsModal from "./FriendRequestsModal";
 import FriendsList from "./FriendsList";
 import IncomingCallModal from "./IncomingCallModal";
+import BottomNav from "./BottomNav";
 
 export default function GlobalHeader() {
     const pathname = usePathname();
@@ -18,7 +19,6 @@ export default function GlobalHeader() {
     const [showSettingsModal, setShowSettingsModal] = useState(false);
     const [showFriendRequests, setShowFriendRequests] = useState(false);
     const [showFriendsList, setShowFriendsList] = useState(false);
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     // Notification states
     const [unreadMessages, setUnreadMessages] = useState(0);
@@ -58,11 +58,6 @@ export default function GlobalHeader() {
         const interval = setInterval(fetchStatus, 30000);
         return () => clearInterval(interval);
     }, [user, unreadMessages, pendingRequests]);
-
-    // Close mobile menu on route change
-    useEffect(() => {
-        setMobileMenuOpen(false);
-    }, [pathname]);
 
     const isActive = (path: string) => {
         if (path === '/feed' && (pathname === '/feed' || pathname === '/')) return true;
@@ -175,7 +170,7 @@ export default function GlobalHeader() {
                             )}
                         </nav>
 
-                        {/* Mobile: key actions + hamburger */}
+                        {/* Mobile: key actions */}
                         <div className="flex md:hidden items-center gap-2">
                             <NotificationBell />
                             {user && (
@@ -188,74 +183,10 @@ export default function GlobalHeader() {
                                     afterSignOutUrl="/"
                                 />
                             )}
-                            <button
-                                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                                className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition relative"
-                            >
-                                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-                                {(unreadMessages > 0 || pendingRequests > 0) && !mobileMenuOpen && (
-                                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
-                                )}
-                            </button>
                         </div>
                     </div>
                 </div>
 
-                {/* Mobile dropdown menu */}
-                {mobileMenuOpen && (
-                    <div className="md:hidden border-t border-white/10 bg-gray-900/98 backdrop-blur-lg animate-in slide-in-from-top-2 duration-200">
-                        <div className="container mx-auto px-2 py-2 flex flex-col gap-1">
-                            <Link href="/feed" className={navLinkClass('/feed', true)}>
-                                <Home className="w-5 h-5" />
-                                Feed
-                            </Link>
-
-                            <Link href="/discover" className={navLinkClass('/discover', true)}>
-                                <Sparkles className="w-5 h-5" />
-                                Descubrir
-                            </Link>
-
-                            <Link href="/communities" className={navLinkClass('/communities', true)}>
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                </svg>
-                                Comunidades
-                            </Link>
-
-                            <Link href="/messages" className={`${navLinkClass('/messages', true)} relative`}>
-                                <MessageCircle className="w-5 h-5" />
-                                Mensajes
-                                {unreadMessages > 0 && (
-                                    <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5">
-                                        {unreadMessages > 99 ? '99+' : unreadMessages}
-                                    </span>
-                                )}
-                            </Link>
-
-                            <div className="border-t border-white/10 my-1" />
-
-                            <button onClick={() => { setShowFriendRequests(true); setMobileMenuOpen(false); }} className={`${navButtonClass(true)} relative`}>
-                                <UserPlus className="w-5 h-5" />
-                                Amigos
-                                {pendingRequests > 0 && (
-                                    <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5">
-                                        {pendingRequests > 99 ? '99+' : pendingRequests}
-                                    </span>
-                                )}
-                            </button>
-
-                            <button onClick={() => { setShowSettingsModal(true); setMobileMenuOpen(false); }} className={navButtonClass(true)}>
-                                <Settings className="w-5 h-5" />
-                                Configuración
-                            </button>
-
-                            <button onClick={handleRefresh} className={navButtonClass(true)}>
-                                <RefreshCcw className="w-5 h-5" />
-                                Refrescar
-                            </button>
-                        </div>
-                    </div>
-                )}
             </header>
 
             {/* Modal de Configuración */}
@@ -274,6 +205,13 @@ export default function GlobalHeader() {
                     <FriendsList />
                 </div>
             )}
+
+            {/* Bottom navigation bar - mobile only */}
+            <BottomNav
+                unreadMessages={unreadMessages}
+                pendingRequests={pendingRequests}
+                onSettingsClick={() => setShowSettingsModal(true)}
+            />
 
             {/* Incoming call overlay - Always mounted */}
             <IncomingCallModal />
