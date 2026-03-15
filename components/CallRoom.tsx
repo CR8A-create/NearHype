@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
     Mic, MicOff, Video, VideoOff, PhoneOff, Monitor,
-    MonitorOff, Loader2, Phone, AlertCircle, RefreshCw, Users
+    MonitorOff, Loader2, AlertCircle, RefreshCw, Users
 } from "lucide-react";
 
 type CallRoomProps = {
@@ -16,7 +16,6 @@ const ICE_SERVERS = [
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
     { urls: "stun:stun.cloudflare.com:3478" },
-    // TURN servers for NAT traversal (free tier)
     {
         urls: "turn:openrelay.metered.ca:80",
         username: "openrelayproject",
@@ -45,7 +44,6 @@ export default function CallRoom({ roomId }: CallRoomProps) {
     const [isCameraOff, setIsCameraOff] = useState(false);
     const [isScreenSharing, setIsScreenSharing] = useState(false);
     const [callDuration, setCallDuration] = useState(0);
-    const [connectionState, setConnectionState] = useState<string>("");
     const [isReconnecting, setIsReconnecting] = useState(false);
 
     // Refs
@@ -59,11 +57,20 @@ export default function CallRoom({ roomId }: CallRoomProps) {
     const hasInitiatedRef = useRef(false);
     const processedSignalsRef = useRef<Set<string>>(new Set());
     const reconnectAttemptsRef = useRef(0);
+    // Fix: queue ICE candidates that arrive before remote description is set
+    const iceCandidateQueueRef = useRef<RTCIceCandidateInit[]>([]);
 
     useEffect(() => {
         initCall();
         return () => { cleanup(); };
     }, [roomId]);
+
+    // Fix: re-assign stream when local video element remounts (e.g. callType change)
+    useEffect(() => {
+        if (localVideoRef.current && localStreamRef.current && !localVideoRef.current.srcObject) {
+            localVideoRef.current.srcObject = localStreamRef.current;
+        }
+    }, [callType]);
 
     const cleanup = useCallback(() => {
         if (pollingRef.current) clearInterval(pollingRef.current);
@@ -79,10 +86,10 @@ export default function CallRoom({ roomId }: CallRoomProps) {
         }
     }, []);
 
-    const requestMedia = async (callType: "video" | "audio"): Promise<MediaStream> => {
+    const requestMedia = async (type: "video" | "audio"): Promise<MediaStream> => {
         try {
             return await navigator.mediaDevices.getUserMedia({
-                video: callType === "video" ? { width: { ideal: 1280 }, height: { ideal: 720 } } : false,
+                video: type === "video" ? { width: { ideal: 1280 }, height: { ideal: 720 } } : false,
                 audio: { echoCancellation: true, noiseSuppression: true },
             });
         } catch (err: unknown) {
@@ -90,8 +97,7 @@ export default function CallRoom({ roomId }: CallRoomProps) {
             if (mediaError.name === "NotAllowedError" || mediaError.name === "PermissionDeniedError") {
                 throw new Error("permissions");
             } else if (mediaError.name === "NotFoundError" || mediaError.name === "DevicesNotFoundError") {
-                // No camera/mic found — try audio only
-                if (callType === "video") {
+                if (type === "video") {
                     return await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
                 }
                 throw new Error("permissions");
@@ -126,22 +132,18 @@ export default function CallRoom({ roomId }: CallRoomProps) {
                 stream = await requestMedia(data.room.callType);
             } catch (err: unknown) {
                 const mediaError = err as { message?: string };
-                if (mediaError.message === "permissions") {
-                    setError("permissions");
-                } else {
-                    setError("unknown");
-                }
+                setError(mediaError.message === "permissions" ? "permissions" : "unknown");
                 setStatus("error");
                 return;
             }
 
             localStreamRef.current = stream;
-            if (localVideoRef.current) {
+            // Fix: guard against double-assignment (React StrictMode / remounts)
+            if (localVideoRef.current && !localVideoRef.current.srcObject) {
                 localVideoRef.current.srcObject = stream;
             }
 
             if (!data.isCaller) {
-                // Callee joins the call
                 await fetch(`/api/calls/${roomId}`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -152,9 +154,8 @@ export default function CallRoom({ roomId }: CallRoomProps) {
             createPeerConnection(stream, data.isCaller, data.currentUserId);
             startSignalPolling();
 
-            // If caller, wait for callee to join before creating offer
+            // Caller: wait for callee to join before creating offer
             if (data.isCaller && data.room.status === "ringing") {
-                // Poll until callee joins (status becomes "active")
                 const waitForCallee = setInterval(async () => {
                     try {
                         const checkRes = await fetch(`/api/calls/${roomId}`);
@@ -162,23 +163,20 @@ export default function CallRoom({ roomId }: CallRoomProps) {
                             const checkData = await checkRes.json();
                             if (checkData.room.status === "active") {
                                 clearInterval(waitForCallee);
-                                // Now create the offer
                                 const pc = peerConnectionRef.current;
                                 if (pc && !hasInitiatedRef.current) {
                                     hasInitiatedRef.current = true;
                                     createOffer(pc, false);
                                 }
-                            } else if (checkData.room.status === "rejected" || checkData.room.status === "ended" || checkData.room.status === "missed") {
+                            } else if (["rejected", "ended", "missed"].includes(checkData.room.status)) {
                                 clearInterval(waitForCallee);
                                 setStatus("ended");
                             }
                         }
                     } catch { /* retry */ }
                 }, 1000);
-                // Timeout after 30s
                 setTimeout(() => clearInterval(waitForCallee), 30000);
             }
-
         } catch {
             setError("unknown");
             setStatus("error");
@@ -212,7 +210,6 @@ export default function CallRoom({ roomId }: CallRoomProps) {
         };
 
         pc.onconnectionstatechange = () => {
-            setConnectionState(pc.connectionState);
             if (pc.connectionState === "failed") {
                 handleConnectionFailed();
             } else if (pc.connectionState === "disconnected") {
@@ -224,7 +221,6 @@ export default function CallRoom({ roomId }: CallRoomProps) {
 
         pc.oniceconnectionstatechange = () => {
             if (pc.iceConnectionState === "failed") {
-                // Try ICE restart
                 if (amICaller && reconnectAttemptsRef.current < 3) {
                     reconnectAttemptsRef.current++;
                     pc.restartIce();
@@ -232,21 +228,13 @@ export default function CallRoom({ roomId }: CallRoomProps) {
                 }
             }
         };
-
-        // For callee: create offer immediately when peer connection is ready
-        // For caller: offer is created after callee joins (see initCall)
-        if (!amICaller && !hasInitiatedRef.current) {
-            // Callee doesn't create offer; they wait for caller's offer via signals
-        }
     };
 
     const handleConnectionFailed = () => {
         if (reconnectAttemptsRef.current >= 3) {
             setError("connection_failed");
             setStatus("error");
-            return;
         }
-        // Will be handled by ICE restart in oniceconnectionstatechange
     };
 
     const createOffer = async (pc: RTCPeerConnection, isRestart: boolean) => {
@@ -254,7 +242,7 @@ export default function CallRoom({ roomId }: CallRoomProps) {
             const offer = await pc.createOffer(isRestart ? { iceRestart: true } : {});
             await pc.setLocalDescription(offer);
             await sendSignal("offer", offer);
-        } catch (err) { console.error('Error creating offer:', err); }
+        } catch (err) { console.error("Error creating offer:", err); }
     };
 
     const sendSignal = async (signalType: string, signalData: unknown) => {
@@ -273,7 +261,6 @@ export default function CallRoom({ roomId }: CallRoomProps) {
                 const pc = peerConnectionRef.current;
                 if (!pc) return;
 
-                // Also check room status
                 const [sigRes, roomRes] = await Promise.all([
                     fetch(`/api/calls/${roomId}/signal`),
                     fetch(`/api/calls/${roomId}`),
@@ -296,12 +283,10 @@ export default function CallRoom({ roomId }: CallRoomProps) {
                     processedSignalsRef.current.add(signal.id);
                     await handleSignal(pc, signal);
                 }
-            } catch (err) { console.error('Signal polling error:', err); }
+            } catch (err) { console.error("Signal polling error:", err); }
         };
 
-        // Poll every 800ms for faster signaling (was 2000ms)
         pollingRef.current = setInterval(poll, 800);
-        // Also run immediately
         poll();
     };
 
@@ -310,6 +295,11 @@ export default function CallRoom({ roomId }: CallRoomProps) {
             switch (signal.signalType) {
                 case "offer": {
                     await pc.setRemoteDescription(new RTCSessionDescription(signal.signalData as RTCSessionDescriptionInit));
+                    // Fix: flush ICE candidates queued before remote description was set
+                    for (const candidate of iceCandidateQueueRef.current) {
+                        try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch { /* ignore */ }
+                    }
+                    iceCandidateQueueRef.current = [];
                     const answer = await pc.createAnswer();
                     await pc.setLocalDescription(answer);
                     await sendSignal("answer", answer);
@@ -318,12 +308,22 @@ export default function CallRoom({ roomId }: CallRoomProps) {
                 case "answer": {
                     if (pc.signalingState === "have-local-offer") {
                         await pc.setRemoteDescription(new RTCSessionDescription(signal.signalData as RTCSessionDescriptionInit));
+                        // Fix: flush ICE candidates queued before remote description was set
+                        for (const candidate of iceCandidateQueueRef.current) {
+                            try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch { /* ignore */ }
+                        }
+                        iceCandidateQueueRef.current = [];
                     }
                     break;
                 }
                 case "ice-candidate": {
-                    if (signal.signalData && pc.remoteDescription) {
-                        await pc.addIceCandidate(new RTCIceCandidate(signal.signalData as RTCIceCandidateInit));
+                    if (signal.signalData) {
+                        if (pc.remoteDescription) {
+                            await pc.addIceCandidate(new RTCIceCandidate(signal.signalData as RTCIceCandidateInit));
+                        } else {
+                            // Fix: queue instead of discarding
+                            iceCandidateQueueRef.current.push(signal.signalData as RTCIceCandidateInit);
+                        }
                     }
                     break;
                 }
@@ -331,7 +331,7 @@ export default function CallRoom({ roomId }: CallRoomProps) {
         } catch { /* ignore signal errors */ }
     };
 
-    // Controls
+    // ─── Controls ────────────────────────────────────────────────────────
     const toggleMute = () => {
         const stream = localStreamRef.current;
         if (!stream) return;
@@ -394,7 +394,7 @@ export default function CallRoom({ roomId }: CallRoomProps) {
         return `${m}:${s}`;
     };
 
-    // ─── Error screen ───────────────────────────────────────────────────
+    // ─── Error screen ────────────────────────────────────────────────────
     if (status === "error") {
         const messages: Record<ErrorType, { title: string; desc: string; action?: string }> = {
             permissions: {
@@ -416,7 +416,6 @@ export default function CallRoom({ roomId }: CallRoomProps) {
                 desc: "Ocurrió un error al iniciar la llamada.",
             },
         };
-
         const msg = messages[error!] ?? messages.unknown;
 
         return (
@@ -464,11 +463,23 @@ export default function CallRoom({ roomId }: CallRoomProps) {
         );
     }
 
+    // ─── Status label ────────────────────────────────────────────────────
+    const statusText = isReconnecting
+        ? "Reconectando..."
+        : status === "connected"
+        ? `En llamada · ${formatDuration(callDuration)}`
+        : status === "connecting" && isCaller
+        ? "Llamando..."
+        : "Conectando...";
+
     // ─── Main call UI ────────────────────────────────────────────────────
     return (
         <div className="fixed inset-0 bg-gray-950 z-50 flex flex-col">
-            {/* Remote video (full screen) */}
-            <div className="flex-1 relative bg-gray-900 overflow-hidden">
+
+            {/* Main area */}
+            <div className="flex-1 relative overflow-hidden bg-black">
+
+                {/* Remote video — full screen, visible only when video connected */}
                 <video
                     ref={remoteVideoRef}
                     autoPlay
@@ -476,25 +487,38 @@ export default function CallRoom({ roomId }: CallRoomProps) {
                     className="w-full h-full object-cover"
                 />
 
-                {/* Status indicator */}
-                {(status === "connecting" || isReconnecting) && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-950/80">
-                        {otherUser?.avatarUrl ? (
-                            <img src={otherUser.avatarUrl} alt={otherUser.username} className="w-28 h-28 rounded-full mb-4 border-4 border-white/10" />
-                        ) : (
-                            <div className="w-28 h-28 rounded-full bg-gray-700 flex items-center justify-center mb-4">
-                                <Users className="w-12 h-12 text-gray-500" />
+                {/* Unified overlay: shown when not-yet-connected OR audio call.
+                    Fixes the double-avatar bug by replacing the two separate overlays
+                    with a single one. */}
+                {(status !== "connected" || callType === "audio") && (
+                    <div className="absolute inset-0 bg-gray-950 flex flex-col items-center justify-center gap-4">
+                        <div className="relative">
+                            {status !== "connected" && (
+                                <div className="absolute -inset-3 rounded-full bg-indigo-500/20 animate-ping" />
+                            )}
+                            {otherUser?.avatarUrl ? (
+                                <img
+                                    src={otherUser.avatarUrl}
+                                    alt={otherUser.username}
+                                    className="relative w-32 h-32 rounded-full border-4 border-white/10 object-cover"
+                                />
+                            ) : (
+                                <div className="relative w-32 h-32 rounded-full bg-gray-800 flex items-center justify-center border-4 border-white/10">
+                                    <Users className="w-16 h-16 text-gray-500" />
+                                </div>
+                            )}
+                        </div>
+                        <div className="text-center">
+                            <p className="text-white font-bold text-xl">{otherUser?.username}</p>
+                            <div className="flex items-center justify-center gap-2 mt-2 text-gray-400 text-sm">
+                                {status !== "connected" && <Loader2 className="w-4 h-4 animate-spin" />}
+                                <span>{statusText}</span>
                             </div>
-                        )}
-                        <p className="text-white font-semibold text-lg">{otherUser?.username}</p>
-                        <div className="flex items-center gap-2 mt-3 text-gray-400 text-sm">
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            <span>{isReconnecting ? "Reconectando..." : "Conectando..."}</span>
                         </div>
                     </div>
                 )}
 
-                {/* Connection quality / reconnecting badge */}
+                {/* Reconnecting badge (connected but link briefly interrupted) */}
                 {isReconnecting && status === "connected" && (
                     <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-yellow-600/90 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5">
                         <RefreshCw className="w-3 h-3 animate-spin" />
@@ -502,110 +526,98 @@ export default function CallRoom({ roomId }: CallRoomProps) {
                     </div>
                 )}
 
-                {/* Top bar */}
-                <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between bg-gradient-to-b from-black/50 to-transparent">
+                {/* Top info bar */}
+                <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between bg-gradient-to-b from-black/60 to-transparent pointer-events-none">
                     <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${status === "connected" ? "bg-green-400" : "bg-yellow-400"} ${status === "connected" ? "animate-pulse" : ""}`} />
-                        <span className="text-white text-sm font-medium">
-                            {status === "connected" ? formatDuration(callDuration) : "Conectando..."}
-                        </span>
+                        <div className={`w-2 h-2 rounded-full ${
+                            status === "connected" ? "bg-green-400 animate-pulse" : "bg-yellow-400"
+                        }`} />
+                        <span className="text-white text-sm font-medium">{statusText}</span>
                     </div>
                     {isScreenSharing && (
-                        <div className="bg-blue-600/80 text-white text-xs px-3 py-1 rounded-full flex items-center gap-1">
+                        <div className="bg-blue-600/80 text-white text-xs px-3 py-1 rounded-full flex items-center gap-1 pointer-events-auto">
                             <Monitor className="w-3 h-3" />
                             Compartiendo pantalla
                         </div>
                     )}
-                    <div className="text-white text-sm opacity-60">
-                        {otherUser?.username}
-                    </div>
+                    <span className="text-white/60 text-sm">{otherUser?.username}</span>
                 </div>
 
-                {/* Local video PiP */}
-                {callType === "video" && (
-                    <div className="absolute bottom-24 right-4 w-32 h-24 md:w-40 md:h-28 rounded-xl overflow-hidden border-2 border-white/20 shadow-xl">
-                        <video
-                            ref={localVideoRef}
-                            autoPlay
-                            playsInline
-                            muted
-                            className={`w-full h-full object-cover ${isCameraOff ? "invisible" : ""}`}
-                        />
-                        {isCameraOff && (
-                            <div className="absolute inset-0 bg-gray-800 flex items-center justify-center">
-                                <VideoOff className="w-6 h-6 text-gray-500" />
-                            </div>
-                        )}
-                    </div>
-                )}
+                {/* Local video PiP — bottom-right corner, max ~160px wide.
+                    Always the SAME DOM element (avoids srcObject re-assignment issues).
+                    Hidden (not removed) for audio calls so the ref stays stable. */}
+                <div className={`absolute bottom-4 right-4 w-28 h-36 md:w-40 md:h-52 rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl transition-opacity ${
+                    callType !== "video" ? "opacity-0 pointer-events-none" : "opacity-100"
+                }`}>
+                    <video
+                        ref={localVideoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className={`w-full h-full object-cover ${isCameraOff ? "invisible" : ""}`}
+                    />
+                    {isCameraOff && (
+                        <div className="absolute inset-0 bg-gray-900 flex items-center justify-center">
+                            <VideoOff className="w-6 h-6 text-gray-500" />
+                        </div>
+                    )}
+                </div>
             </div>
 
-            {/* Audio-only local stream (hidden) */}
-            {callType === "audio" && (
-                <video ref={localVideoRef} autoPlay playsInline muted className="hidden" />
-            )}
-
             {/* Controls bar */}
-            <div className="bg-gray-900/95 backdrop-blur-sm px-6 py-4 safe-area-inset-bottom">
-                <div className="flex items-center justify-center gap-4 max-w-sm mx-auto">
-                    {/* Mute */}
+            <div
+                className="bg-gray-900/95 backdrop-blur-sm px-6 py-5"
+                style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
+            >
+                <div className="flex items-center justify-center gap-4 max-w-xs mx-auto">
+
+                    {/* Mute mic */}
                     <button
                         onClick={toggleMute}
-                        className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${isMuted ? "bg-red-600" : "bg-gray-700 hover:bg-gray-600"}`}
+                        className={`w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-95 ${
+                            isMuted ? "bg-red-600 hover:bg-red-700" : "bg-gray-700 hover:bg-gray-600"
+                        }`}
                         title={isMuted ? "Activar micrófono" : "Silenciar"}
                     >
                         {isMuted ? <MicOff className="w-6 h-6 text-white" /> : <Mic className="w-6 h-6 text-white" />}
                     </button>
 
-                    {/* End call */}
+                    {/* End call — red, larger */}
                     <button
                         onClick={endCall}
-                        className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center hover:bg-red-700 transition-all shadow-lg shadow-red-600/30 hover:scale-105"
+                        className="w-16 h-16 rounded-full bg-red-600 hover:bg-red-700 flex items-center justify-center transition-all active:scale-95 shadow-lg shadow-red-600/40"
                         title="Terminar llamada"
                     >
                         <PhoneOff className="w-7 h-7 text-white" />
                     </button>
 
-                    {/* Camera (video calls only) */}
+                    {/* Camera toggle — video calls only */}
                     {callType === "video" && (
                         <button
                             onClick={toggleCamera}
-                            className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${isCameraOff ? "bg-red-600" : "bg-gray-700 hover:bg-gray-600"}`}
+                            className={`w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-95 ${
+                                isCameraOff ? "bg-red-600 hover:bg-red-700" : "bg-gray-700 hover:bg-gray-600"
+                            }`}
                             title={isCameraOff ? "Activar cámara" : "Apagar cámara"}
                         >
                             {isCameraOff ? <VideoOff className="w-6 h-6 text-white" /> : <Video className="w-6 h-6 text-white" />}
                         </button>
                     )}
 
-                    {/* Screen share */}
-                    <button
-                        onClick={toggleScreenShare}
-                        className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${isScreenSharing ? "bg-blue-600" : "bg-gray-700 hover:bg-gray-600"}`}
-                        title={isScreenSharing ? "Dejar de compartir" : "Compartir pantalla"}
-                    >
-                        {isScreenSharing ? <MonitorOff className="w-6 h-6 text-white" /> : <Monitor className="w-6 h-6 text-white" />}
-                    </button>
+                    {/* Screen share — video calls only */}
+                    {callType === "video" && (
+                        <button
+                            onClick={toggleScreenShare}
+                            className={`w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-95 ${
+                                isScreenSharing ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-700 hover:bg-gray-600"
+                            }`}
+                            title={isScreenSharing ? "Dejar de compartir" : "Compartir pantalla"}
+                        >
+                            {isScreenSharing ? <MonitorOff className="w-6 h-6 text-white" /> : <Monitor className="w-6 h-6 text-white" />}
+                        </button>
+                    )}
                 </div>
             </div>
-
-            {/* Audio-only UI (no remote video) */}
-            {callType === "audio" && status !== "connected" && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="text-center">
-                        <div className="relative mx-auto w-32 h-32 mb-4">
-                            <div className="absolute inset-0 rounded-full bg-accent/20 animate-ping" />
-                            {otherUser?.avatarUrl ? (
-                                <img src={otherUser.avatarUrl} alt="" className="relative w-32 h-32 rounded-full" />
-                            ) : (
-                                <div className="relative w-32 h-32 rounded-full bg-accent/30 flex items-center justify-center">
-                                    <Phone className="w-16 h-16 text-accent" />
-                                </div>
-                            )}
-                        </div>
-                        <p className="text-white font-bold text-xl">{otherUser?.username}</p>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
