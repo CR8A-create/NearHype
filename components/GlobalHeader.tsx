@@ -28,10 +28,8 @@ export default function GlobalHeader() {
     const playNotificationSound = () => {
         try {
             const audio = new Audio('/sounds/notification.mp3');
-            audio.play().catch(e => console.log('Audio play failed (interaction needed):', e));
-        } catch (e) {
-            console.error('Audio error', e);
-        }
+            audio.play().catch(() => { /* no sound available */ });
+        } catch { /* ignore */ }
     };
 
     const fetchStatus = async () => {

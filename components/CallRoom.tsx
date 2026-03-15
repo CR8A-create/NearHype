@@ -138,6 +138,8 @@ export default function CallRoom({ roomId }: CallRoomProps) {
             }
 
             localStreamRef.current = stream;
+            // Ensure audio tracks are enabled (not muted by default)
+            stream.getAudioTracks().forEach(track => { track.enabled = true; });
             // Fix: guard against double-assignment (React StrictMode / remounts)
             if (localVideoRef.current && !localVideoRef.current.srcObject) {
                 localVideoRef.current.srcObject = stream;

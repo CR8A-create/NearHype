@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { MessageCircle, X, Image as ImageIcon, Trash2, MoreVertical } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import ImageUpload from "@/components/ImageUpload";
@@ -307,9 +308,9 @@ function MessageItem({
                 )}
 
                 <div className="flex items-baseline gap-2 mb-1">
-                    <span className="font-semibold text-white">
+                    <Link href={`/users/${message.author.username}`} className="font-semibold text-white hover:text-indigo-400 hover:underline transition">
                         {message.author.username}
-                    </span>
+                    </Link>
                     <span className="text-xs text-gray-500">
                         {formatTime(message.createdAt!)}
                     </span>

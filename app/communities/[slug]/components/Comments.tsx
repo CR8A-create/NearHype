@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 
@@ -26,7 +27,7 @@ export function Comment({ comment, postId, isReply = false }: { comment: any; po
     const { user } = useUser();
     const [showReplyForm, setShowReplyForm] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [showActions, setShowActions] = useState(false);
+    const [localReplies, setLocalReplies] = useState<any[]>(comment.replies || []);
 
     const formatTime = (timestamp: string) => {
         const date = new Date(timestamp);
@@ -85,11 +86,7 @@ export function Comment({ comment, postId, isReply = false }: { comment: any; po
 
     return (
         <div className={isReply ? 'ml-8' : ''}>
-            <div
-                className="flex items-start gap-3 group relative"
-                onMouseEnter={() => setShowActions(true)}
-                onMouseLeave={() => setShowActions(false)}
-            >
+            <div className="flex items-start gap-3 group relative">
                 {comment.author?.avatarUrl ? (
                     <img
                         src={comment.author.avatarUrl}
@@ -102,33 +99,33 @@ export function Comment({ comment, postId, isReply = false }: { comment: any; po
                     </div>
                 )}
                 <div className="flex-1">
-                    <div className="flex items-baseline gap-2 mb-1">
-                        <span className="font-semibold text-white text-sm">
+                    <div className="flex items-baseline gap-2 mb-1 flex-wrap">
+                        <Link
+                            href={`/users/${comment.author?.username}`}
+                            className="font-semibold text-white text-sm hover:text-indigo-400 hover:underline transition"
+                        >
                             {comment.author?.username || 'Usuario'}
-                        </span>
+                        </Link>
                         <span className="text-xs text-gray-500">
                             {formatTime(comment.createdAt)}
                         </span>
-                        {showActions && (
-                            <>
-                                {!isReply && (
-                                    <button
-                                        onClick={() => setShowReplyForm(!showReplyForm)}
-                                        className="text-xs text-indigo-400 hover:text-indigo-300 transition"
-                                    >
-                                        {showReplyForm ? 'Cancelar' : 'Responder'}
-                                    </button>
-                                )}
-                                {canDelete && (
-                                    <button
-                                        onClick={() => setShowDeleteConfirm(true)}
-                                        className="text-xs text-red-400 hover:text-red-300 transition flex items-center gap-1"
-                                    >
-                                        <Trash2 className="w-3 h-3" />
-                                        Eliminar
-                                    </button>
-                                )}
-                            </>
+                        {/* Desktop: reply + delete buttons visible on hover */}
+                        {!isReply && (
+                            <button
+                                onClick={() => setShowReplyForm(!showReplyForm)}
+                                className="hidden md:inline-block text-xs text-indigo-400 hover:text-indigo-300 transition opacity-0 group-hover:opacity-100"
+                            >
+                                {showReplyForm ? 'Cancelar' : 'Responder'}
+                            </button>
+                        )}
+                        {canDelete && (
+                            <button
+                                onClick={() => setShowDeleteConfirm(true)}
+                                className="hidden md:flex text-xs text-red-400 hover:text-red-300 transition items-center gap-1 opacity-0 group-hover:opacity-100"
+                            >
+                                <Trash2 className="w-3 h-3" />
+                                Eliminar
+                            </button>
                         )}
                     </div>
 
@@ -158,13 +155,28 @@ export function Comment({ comment, postId, isReply = false }: { comment: any; po
 
                     <p className="text-gray-300 text-sm mb-2">{comment.content}</p>
 
+                    {/* Mobile: reply button always visible below comment */}
+                    {!isReply && (
+                        <div className="md:hidden mt-1 mb-1">
+                            <button
+                                onClick={() => setShowReplyForm(!showReplyForm)}
+                                className="text-xs text-indigo-400 hover:text-indigo-300 transition"
+                            >
+                                {showReplyForm ? 'Cancelar' : 'Responder'}
+                            </button>
+                        </div>
+                    )}
+
                     {/* Reply Form */}
                     {showReplyForm && (
                         <div className="mt-2">
                             <AddCommentForm
                                 postId={postId}
                                 parentCommentId={comment.id}
-                                onCommentAdded={() => setShowReplyForm(false)}
+                                onCommentAdded={(newReply) => {
+                                    setLocalReplies(prev => [...prev, newReply]);
+                                    setShowReplyForm(false);
+                                }}
                                 placeholder="Escribe una respuesta..."
                             />
                         </div>
@@ -173,9 +185,9 @@ export function Comment({ comment, postId, isReply = false }: { comment: any; po
             </div>
 
             {/* Nested Replies */}
-            {comment.replies && comment.replies.length > 0 && (
+            {localReplies.length > 0 && (
                 <div className="mt-3 space-y-3">
-                    {comment.replies.map((reply: any) => (
+                    {localReplies.map((reply: any) => (
                         <Comment key={reply.id} comment={reply} postId={postId} isReply={true} />
                     ))}
                 </div>
@@ -218,7 +230,6 @@ export function AddCommentForm({ postId, parentCommentId, onCommentAdded, placeh
                 if (onCommentAdded) {
                     onCommentAdded(data.comment);
                 }
-                window.location.reload();
             }
         } catch (error) {
             console.error('Error adding comment:', error);

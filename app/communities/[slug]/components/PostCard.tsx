@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { ChevronUp, ChevronDown, MessageCircle, Loader2, MoreVertical, Edit, Trash } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import { LinkEmbed } from "./LinkEmbeds";
@@ -436,7 +437,9 @@ export default function PostCard({ post, communitySlug, userRole }: { post: Post
                             {post.author.avatarUrl && (
                                 <img src={post.author.avatarUrl} alt="" className="w-5 h-5 rounded-full" />
                             )}
-                            <span>{post.author.username}</span>
+                            <Link href={`/users/${post.author.username}`} className="hover:text-indigo-400 hover:underline transition">
+                                {post.author.username}
+                            </Link>
                         </div>
                         <span>•</span>
                         <span>{new Date(post.createdAt).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })}</span>
