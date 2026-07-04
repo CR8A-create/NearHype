@@ -5,11 +5,15 @@ import { MapPin, Sparkles, Home, RefreshCcw, ArrowLeft, Settings, UserPlus, Mess
 import { UserButton, useUser } from "@clerk/nextjs";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
-import SettingsModal from "./SettingsModal";
+import dynamic from "next/dynamic";
 import NotificationBell from "./NotificationBell";
-import FriendRequestsModal from "./FriendRequestsModal";
 import IncomingCallModal from "./IncomingCallModal";
 import BottomNav from "./BottomNav";
+
+// Modales solo visibles bajo demanda: carga diferida para no engordar el
+// bundle compartido (el header está en todas las páginas)
+const SettingsModal = dynamic(() => import("./SettingsModal"), { ssr: false });
+const FriendRequestsModal = dynamic(() => import("./FriendRequestsModal"), { ssr: false });
 
 export default function GlobalHeader() {
     const pathname = usePathname();

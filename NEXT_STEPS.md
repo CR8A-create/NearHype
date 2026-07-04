@@ -25,7 +25,8 @@ Con `npm run dev` (requiere `.env.local` completo), recorrer y anotar fallos en 
 ## Fase 2 en curso
 
 - ~~Auditoría de consultas Drizzle~~ **HECHA 2026-07-04**: 3 N+1 corregidos + upsert en feedCache.
-- Siguiente: decisión de imágenes (next/image vs img lazy, ver KNOWN_ISSUES), lazy loading de componentes pesados (CallRoom, modales), y evaluar migrar la señalización WebRTC de polling a SSE.
+- ~~Lazy loading de modales~~ **HECHO 2026-07-04** (header + página de comunidad). Al hacer el e2e manual, verificar que los modales abren (ajustes, solicitudes, crear/editar post, roles).
+- Siguiente: decisión de imágenes (next/image vs img lazy, ver KNOWN_ISSUES) y evaluar migrar la señalización WebRTC de polling a SSE.
 
 ## Después (Fase 1 — seguridad y tests)
 

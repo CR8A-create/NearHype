@@ -6,11 +6,12 @@ import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
 import GlobalHeader from "@/components/GlobalHeader";
 import MembersPanel from "./components/MembersPanel";
-import RoleManagementPanel from "./components/RoleManagementPanel";
+import dynamic from "next/dynamic";
+const RoleManagementPanel = dynamic(() => import("./components/RoleManagementPanel"), { ssr: false });
 import CommunityChat from "./components/CommunityChat";
 import PostCard from "./components/PostCard";
-import CreatePostModal from "./components/CreatePostModal";
-import EditCommunityModal from "./components/EditCommunityModal";
+const CreatePostModal = dynamic(() => import("./components/CreatePostModal"), { ssr: false });
+const EditCommunityModal = dynamic(() => import("./components/EditCommunityModal"), { ssr: false });
 
 type Community = {
     id: string;

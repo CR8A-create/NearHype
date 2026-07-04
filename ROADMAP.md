@@ -23,7 +23,7 @@ Hoja de ruta priorizada de NearHype. Orden absoluto: compilar → ejecutar → e
 - [ ] Revisar señalización WebRTC por polling → evaluar reutilizar el canal SSE
 - [x] Auditoría de consultas Drizzle — 2026-07-04. 3 N+1 corregidos (contador de no-leídos del header 30s, replies de comentarios, consumo de señales WebRTC 800ms) + upsert en feedCache. El schema ya estaba bien indexado.
 - [ ] Optimización de imágenes (`next/image` en vez de `<img>`)
-- [ ] Revisar tamaño de bundle y lazy loading de componentes pesados (CallRoom, modales)
+- [x] Lazy loading de modales condicionales (SettingsModal y FriendRequestsModal en el header global; CreatePostModal, EditCommunityModal y RoleManagementPanel en la página de comunidad) vía next/dynamic — 2026-07-04. CallRoom no se difiere: es el contenido principal de su página.
 
 ## Fase 3 — Diseño y UX
 

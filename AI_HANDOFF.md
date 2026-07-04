@@ -51,7 +51,8 @@ Red social hiperlocal (Next.js 16 App Router + React 19, Clerk, Drizzle + Neon P
    - `calls/[roomId]/signal` GET (polling ~800ms en llamada): un UPDATE por señal → un UPDATE con `inArray`.
    - `feed/generate`: caché con DELETE+INSERT → upsert `onConflictDoUpdate` sobre el índice único de `cacheKey`.
    - El schema ya estaba bien indexado (índices compuestos correctos en mensajes, amistades, notificaciones, caché).
-16. Ver commits de esta fecha para el detalle de cada cambio.
+16. **Lazy loading**: los modales condicionales se cargan con `next/dynamic` + `ssr: false` — `SettingsModal`/`FriendRequestsModal` en `GlobalHeader` (presente en todas las páginas) y `CreatePostModal`/`EditCommunityModal`/`RoleManagementPanel` en la página de comunidad. Pendiente de comprobar en el e2e manual que los modales abren bien (no testeable en local sin claves dev de Clerk).
+17. Ver commits de esta fecha para el detalle de cada cambio.
 
 ## Decisiones de arquitectura vigentes
 
