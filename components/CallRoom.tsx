@@ -60,11 +60,6 @@ export default function CallRoom({ roomId }: CallRoomProps) {
     // Fix: queue ICE candidates that arrive before remote description is set
     const iceCandidateQueueRef = useRef<RTCIceCandidateInit[]>([]);
 
-    useEffect(() => {
-        initCall();
-        return () => { cleanup(); };
-    }, [roomId]);
-
     // Fix: re-assign stream when local video element remounts (e.g. callType change)
     useEffect(() => {
         if (localVideoRef.current && localStreamRef.current && !localVideoRef.current.srcObject) {
@@ -184,6 +179,12 @@ export default function CallRoom({ roomId }: CallRoomProps) {
             setStatus("error");
         }
     };
+
+    useEffect(() => {
+        initCall();
+        return () => { cleanup(); };
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- initCall/cleanup are stable per mount; the call must only re-run when the room changes
+    }, [roomId]);
 
     const createPeerConnection = (stream: MediaStream, amICaller: boolean, _myUserId: string) => {
         const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });

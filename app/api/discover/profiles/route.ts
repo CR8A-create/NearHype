@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
         const excludeIds = [currentUser.id, ...swipedIds, ...friendIds, ...pendingIds];
 
         // Obtener candidatos (usuarios con perfil público o amigos)
-        let candidatesQuery = db
+        const candidatesQuery = db
             .select({
                 id: users.id,
                 username: users.username,

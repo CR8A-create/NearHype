@@ -4,7 +4,7 @@ import Link from "next/link";
 import { MapPin, Sparkles, Home, RefreshCcw, ArrowLeft, Settings, UserPlus, MessageCircle } from "lucide-react";
 import { UserButton, useUser } from "@clerk/nextjs";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import SettingsModal from "./SettingsModal";
 import NotificationBell from "./NotificationBell";
 import FriendRequestsModal from "./FriendRequestsModal";
@@ -32,30 +32,43 @@ export default function GlobalHeader() {
         } catch { /* ignore */ }
     };
 
-    const fetchStatus = async () => {
-        if (!user) return;
-        try {
-            const res = await fetch('/api/user/status');
-            if (!res.ok) return;
-            const data = await res.json();
-
-            if (data.unreadMessages > unreadMessages || data.pendingRequests > pendingRequests) {
-                playNotificationSound();
-            }
-
-            setUnreadMessages(data.unreadMessages || 0);
-            setPendingRequests(data.pendingRequests || 0);
-        } catch (e) {
-            // silent - avoid console spam
-        }
-    };
+    // Previous counts live in a ref so the polling interval survives re-renders
+    // without capturing stale values in its closure.
+    const prevCountsRef = useRef({ messages: 0, requests: 0 });
 
     // Poll every 30 seconds (reduced to avoid Clerk rate limits)
     useEffect(() => {
+        if (!user) return;
+        let cancelled = false;
+
+        const fetchStatus = async () => {
+            try {
+                const res = await fetch('/api/user/status');
+                if (!res.ok) return;
+                const data = await res.json();
+                if (cancelled) return;
+
+                const messages = data.unreadMessages || 0;
+                const requests = data.pendingRequests || 0;
+                if (messages > prevCountsRef.current.messages || requests > prevCountsRef.current.requests) {
+                    playNotificationSound();
+                }
+                prevCountsRef.current = { messages, requests };
+                setUnreadMessages(messages);
+                setPendingRequests(requests);
+            } catch {
+                // silent - avoid console spam
+            }
+        };
+
         fetchStatus();
         const interval = setInterval(fetchStatus, 30000);
-        return () => clearInterval(interval);
-    }, [user, unreadMessages, pendingRequests]);
+        return () => {
+            cancelled = true;
+            clearInterval(interval);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- playNotificationSound is stable in practice
+    }, [user]);
 
     const isActive = (path: string) => {
         if (path === '/feed' && (pathname === '/feed' || pathname === '/')) return true;

@@ -73,7 +73,7 @@ function parseDuckDuckGoHTML(html: string): SearchResult[] {
         if (!linkMatch) continue;
 
         let url = linkMatch[1];
-        let title = linkMatch[2].replace(/<[^>]+>/g, ''); // Limpiar tags HTML
+        const title = linkMatch[2].replace(/<[^>]+>/g, ''); // Limpiar tags HTML
 
         // Decodificar URL de redirección de DDG si es necesario
         if (url.includes('uddg=')) {

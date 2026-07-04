@@ -203,7 +203,7 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
                                                 />
                                             </div>
                                             <p className="text-xs text-gray-500 mt-2">
-                                                Si escribes manualmente, asegúrate de ser específico (Ej: "Badajoz, ES"). O usa el GPS de tu dispositivo en el Feed.
+                                                Si escribes manualmente, asegúrate de ser específico (Ej: &quot;Badajoz, ES&quot;). O usa el GPS de tu dispositivo en el Feed.
                                             </p>
                                         </div>
 

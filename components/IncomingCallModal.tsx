@@ -22,6 +22,13 @@ export default function IncomingCallModal() {
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const failCountRef = useRef(0);
 
+    const stopRingtone = () => {
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current = null;
+        }
+    };
+
     // Poll for incoming calls every 3 seconds (only when signed in)
     useEffect(() => {
         if (!isSignedIn) return;
@@ -61,13 +68,6 @@ export default function IncomingCallModal() {
             stopRingtone();
         };
     }, [incomingCall, isResponding, isSignedIn]);
-
-    const stopRingtone = () => {
-        if (audioRef.current) {
-            audioRef.current.pause();
-            audioRef.current = null;
-        }
-    };
 
     const acceptCall = async () => {
         if (!incomingCall) return;
