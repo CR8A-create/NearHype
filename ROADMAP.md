@@ -21,7 +21,7 @@ Hoja de ruta priorizada de NearHype. Orden absoluto: compilar → ejecutar → e
 ## Fase 2 — Arquitectura y rendimiento
 
 - [ ] Revisar señalización WebRTC por polling → evaluar reutilizar el canal SSE
-- [ ] Auditar consultas Drizzle (N+1, índices en schema.ts)
+- [x] Auditoría de consultas Drizzle — 2026-07-04. 3 N+1 corregidos (contador de no-leídos del header 30s, replies de comentarios, consumo de señales WebRTC 800ms) + upsert en feedCache. El schema ya estaba bien indexado.
 - [ ] Optimización de imágenes (`next/image` en vez de `<img>`)
 - [ ] Revisar tamaño de bundle y lazy loading de componentes pesados (CallRoom, modales)
 

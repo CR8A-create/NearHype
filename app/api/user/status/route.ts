@@ -3,7 +3,7 @@
 import { getOrCreateUser } from "@/lib/getOrCreateUser";
 import { db } from "@/lib/db";
 import { dmConversations, dmMessages, friendRequests } from "@/lib/db/schema";
-import { eq, or, and, ne } from "drizzle-orm";
+import { eq, or, and, ne, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 // GET /api/user/status - Obtener contadores de notificaciones
@@ -24,18 +24,17 @@ export async function GET() {
             ),
         });
 
-        let unreadMessages = 0;
-        for (const conv of myConversations) {
-            const count = await db.$count(
-                dmMessages,
-                and(
-                    eq(dmMessages.conversationId, conv.id),
-                    eq(dmMessages.isRead, false),
-                    ne(dmMessages.senderId, user.id) // Mensajes que NO envié yo
-                )
-            );
-            unreadMessages += count;
-        }
+        // Un único COUNT sobre todas las conversaciones (esta ruta se pollea
+        // cada 30s desde el header: evitar una query por conversación)
+        const conversationIds = myConversations.map(c => c.id);
+        const unreadMessages = conversationIds.length === 0 ? 0 : await db.$count(
+            dmMessages,
+            and(
+                inArray(dmMessages.conversationId, conversationIds),
+                eq(dmMessages.isRead, false),
+                ne(dmMessages.senderId, user.id) // Mensajes que NO envié yo
+            )
+        );
 
         // Contar solicitudes de amistad pendientes (donde soy receptor)
         const pendingRequests = await db.$count(

@@ -45,7 +45,13 @@ Red social hiperlocal (Next.js 16 App Router + React 19, Clerk, Drizzle + Neon P
 12. **Validación Zod completada en el resto de rutas** (11 más: onboarding, profile, profile/public, preferences, interests/weight, friends/request, dms iniciar, calls crear/acción, vote, community PATCH, swipe). Todas las rutas con body JSON usan `parseBody(req, schema)`.
 13. **Regresión crítica detectada y corregida con smoke test real**: tras el update de Clerk (lockfile), la landing `/` devolvía **500 en SSR** — `@clerk/nextjs` >= 6.39 rechaza `SignInButton`/`SignUpButton` usados directamente en Server Components (los children llegan serializados como array por la frontera RSC). Fix: nuevo `components/AuthButtons.tsx` ("use client") con `SignInCta`/`SignUpCta`; `app/page.tsx` los usa. **Patrón a seguir: los botones de Clerk siempre desde componentes cliente.**
 14. **Smoke test local**: la app arranca y la landing renderiza (verificado con navegador). Nota: `.env.local` contiene claves de **producción** de Clerk (dominio nearhype.com), por lo que el login no funciona en localhost — para e2e local hacen falta claves de una instancia de desarrollo de Clerk (documentado en KNOWN_ISSUES).
-15. Ver commits de esta fecha para el detalle de cada cambio.
+15. **Auditoría de consultas DB — 3 N+1 corregidos** (importante en Neon free tier):
+   - `user/status` (polling cada 30s desde el header): un COUNT por conversación → un único COUNT con `inArray`.
+   - `posts/[id]/comments` GET: una query de replies por comentario → una sola query agrupada en JS.
+   - `calls/[roomId]/signal` GET (polling ~800ms en llamada): un UPDATE por señal → un UPDATE con `inArray`.
+   - `feed/generate`: caché con DELETE+INSERT → upsert `onConflictDoUpdate` sobre el índice único de `cacheKey`.
+   - El schema ya estaba bien indexado (índices compuestos correctos en mensajes, amistades, notificaciones, caché).
+16. Ver commits de esta fecha para el detalle de cada cambio.
 
 ## Decisiones de arquitectura vigentes
 

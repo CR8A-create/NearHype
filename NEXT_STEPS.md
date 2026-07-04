@@ -22,6 +22,11 @@ Con `npm run dev` (requiere `.env.local` completo), recorrer y anotar fallos en 
 
 **Atención especial**: en esta sesión se refactorizaron los efectos de `CommunityChat`, `MembersPanel`, `RoleManagementPanel`, `communities/[slug]/page`, `feed/page`, `DMChat`, `NotificationBell`, `SettingsModal` y `users/[username]/page` (loaders a `useCallback`). El riesgo típico de regresión sería un bucle de refetch (red en bucle en DevTools) o datos que no se recargan al cambiar de slug/usuario.
 
+## Fase 2 en curso
+
+- ~~Auditoría de consultas Drizzle~~ **HECHA 2026-07-04**: 3 N+1 corregidos + upsert en feedCache.
+- Siguiente: decisión de imágenes (next/image vs img lazy, ver KNOWN_ISSUES), lazy loading de componentes pesados (CallRoom, modales), y evaluar migrar la señalización WebRTC de polling a SSE.
+
 ## Después (Fase 1 — seguridad y tests)
 
 - ~~npm audit~~ **REVISADO 2026-07-04**: 33 → 15 avisos (0 críticos). Restantes documentados en KNOWN_ISSUES como riesgo aceptado.

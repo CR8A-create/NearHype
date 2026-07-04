@@ -4,7 +4,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { users, callRooms, callSignals } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 // POST - Enviar señal (SDP offer/answer o ICE candidate)
@@ -76,11 +76,12 @@ export async function GET(
                 eq(callSignals.consumed, false)
             ));
 
-        // Marcar como consumidas
-        for (const signal of signals) {
+        // Marcar como consumidas en un solo UPDATE (esta ruta se pollea ~cada
+        // 800ms durante una llamada: evitar una query por señal)
+        if (signals.length > 0) {
             await db.update(callSignals)
                 .set({ consumed: true })
-                .where(eq(callSignals.id, signal.id));
+                .where(inArray(callSignals.id, signals.map(s => s.id)));
         }
 
         return NextResponse.json({

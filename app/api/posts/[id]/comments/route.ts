@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { communityPosts, postComments, users } from "@/lib/db/schema";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, sql, inArray } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { createCommentSchema, parseBody } from "@/lib/validation";
 
@@ -42,28 +42,33 @@ export async function GET(req: NextRequest, { params }: Params) {
             orderBy: (comments, { desc }) => [desc(comments.upvotes), desc(comments.createdAt)],
         });
 
-        // Para cada comentario, obtener sus replies (profundidad 1 nivel por ahora)
-        const commentsWithReplies = await Promise.all(
-            topLevelComments.map(async (comment) => {
-                const replies = await db.query.postComments.findMany({
-                    where: eq(postComments.parentCommentId, comment.id),
-                    with: {
-                        author: {
-                            columns: {
-                                username: true,
-                                avatarUrl: true,
-                            },
-                        },
+        // Replies (profundidad 1) en una sola query para evitar N+1
+        const topIds = topLevelComments.map(c => c.id);
+        const allReplies = topIds.length === 0 ? [] : await db.query.postComments.findMany({
+            where: inArray(postComments.parentCommentId, topIds),
+            with: {
+                author: {
+                    columns: {
+                        username: true,
+                        avatarUrl: true,
                     },
-                    orderBy: (comments, { asc }) => [asc(comments.createdAt)],
-                });
+                },
+            },
+            orderBy: (comments, { asc }) => [asc(comments.createdAt)],
+        });
 
-                return {
-                    ...comment,
-                    replies,
-                };
-            })
-        );
+        const repliesByParent = new Map<string, typeof allReplies>();
+        for (const reply of allReplies) {
+            const parentId = reply.parentCommentId!;
+            const bucket = repliesByParent.get(parentId);
+            if (bucket) bucket.push(reply);
+            else repliesByParent.set(parentId, [reply]);
+        }
+
+        const commentsWithReplies = topLevelComments.map(comment => ({
+            ...comment,
+            replies: repliesByParent.get(comment.id) ?? [],
+        }));
 
         return NextResponse.json({
             comments: commentsWithReplies,

@@ -492,13 +492,21 @@ export async function GET() {
 
         // ====== CACHE ======
         const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 min
-        await db.delete(feedCache).where(eq(feedCache.cacheKey, cacheKey));
+        // Upsert sobre el índice único de cacheKey (antes: DELETE + INSERT, 2 round-trips)
         await db.insert(feedCache).values({
             userId: user.id,
             feedData: diversified,
             cacheKey: cacheKey,
             expiresAt: expiresAt,
             apiVersion: CURRENT_API_VERSION,
+        }).onConflictDoUpdate({
+            target: feedCache.cacheKey,
+            set: {
+                feedData: diversified,
+                expiresAt: expiresAt,
+                apiVersion: CURRENT_API_VERSION,
+                generatedAt: new Date(),
+            },
         });
 
         const uniqueSourcesCount = new Set(diversified.map(item => item.source)).size;
