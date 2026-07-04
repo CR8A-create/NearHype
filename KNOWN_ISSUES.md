@@ -14,7 +14,6 @@ Problemas conocidos y confirmados. Actualizar al resolver cada uno. Última actu
 ## Menores
 
 - ~40 warnings de lint (`no-unused-vars`, `<img>` en vez de `next/image`, deps de hooks incompletas).
-- `tsconfig.tsbuildinfo` está commiteado (debería ignorarse).
 
 ## Deuda técnica / observaciones
 

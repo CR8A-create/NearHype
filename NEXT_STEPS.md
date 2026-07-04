@@ -9,8 +9,7 @@ El objetivo "0 errores de lint" se completó el 2026-07-04. Quedan ~40 **warning
 ## Objetivo inmediato: cerrar la Fase 0 del ROADMAP
 
 1. **Limpiar warnings de lint** (`npx eslint` sin `--quiet`): imports/variables sin usar, `<img>` → `next/image` (evaluar coste/beneficio en cada caso: `next/image` con dominios externos requiere configurar `remotePatterns` en `next.config.ts`), deps de hooks incompletas.
-2. **Añadir `tsconfig.tsbuildinfo` a `.gitignore`** y sacarlo del repo (`git rm --cached`).
-3. **Verificación manual end-to-end** con `npm run dev`: onboarding, feed, comunidades (posts, comentarios, chat), DMs, llamadas, discover, amigos, notificaciones. Anotar cualquier fallo en KNOWN_ISSUES.md.
+2. **Verificación manual end-to-end** con `npm run dev`: onboarding, feed, comunidades (posts, comentarios, chat), DMs, llamadas, discover, amigos, notificaciones. Anotar cualquier fallo en KNOWN_ISSUES.md.
 
 ## Después (Fase 1 — seguridad y tests)
 

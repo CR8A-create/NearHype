@@ -9,7 +9,6 @@ Hoja de ruta priorizada de NearHype. Orden absoluto: compilar → ejecutar → e
 - [x] Lint en verde: 54 errores corregidos (incl. 3 bugs de hooks: CallRoom, IncomingCallModal, GlobalHeader) — 2026-07-04
 - [ ] Limpiar los ~40 warnings de lint
 - [ ] Verificación manual end-to-end con dev server (feed, comunidades, DMs, llamadas, discover)
-- [ ] Ignorar `tsconfig.tsbuildinfo` en git
 
 ## Fase 1 — Calidad y seguridad
 
