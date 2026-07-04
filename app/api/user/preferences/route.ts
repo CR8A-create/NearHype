@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { userSettings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { updatePreferencesSchema, parseBody } from "@/lib/validation";
 
 // GET /api/user/preferences - Obtener preferencias de tema
 export async function GET() {
@@ -42,7 +43,9 @@ export async function PUT(req: NextRequest) {
             return NextResponse.json({ error: "No autenticado" }, { status: 401 });
         }
 
-        const { theme } = await req.json();
+        const parsed = await parseBody(req, updatePreferencesSchema);
+        if (parsed.error) return parsed.error;
+        const { theme } = parsed.data;
 
         // Buscar settings existentes
         const existingSettings = await db.query.userSettings.findFirst({

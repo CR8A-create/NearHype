@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { users, friendRequests, friendships } from "@/lib/db/schema";
 import { eq, and, or } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { friendRequestSchema, parseBody } from "@/lib/validation";
 
 // POST /api/friends/request - Enviar solicitud de amistad
 export async function POST(req: NextRequest) {
@@ -23,11 +24,9 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
         }
 
-        const { receiverUsername } = await req.json();
-
-        if (!receiverUsername) {
-            return NextResponse.json({ error: "Falta el username del destinatario" }, { status: 400 });
-        }
+        const parsed = await parseBody(req, friendRequestSchema);
+        if (parsed.error) return parsed.error;
+        const { receiverUsername } = parsed.data;
 
         // Obtener usuario destinatario
         const receiver = await db.query.users.findFirst({

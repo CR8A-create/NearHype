@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { users, callRooms, friendships } from "@/lib/db/schema";
 import { eq, or, and, desc } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { createCallSchema, parseBody } from "@/lib/validation";
 
 // POST - Crear una llamada nueva
 export async function POST(req: NextRequest) {
@@ -13,9 +14,9 @@ export async function POST(req: NextRequest) {
         const currentUser = await getOrCreateUser();
         if (!currentUser) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
-        const { calleeId, callType = "video" } = await req.json();
-
-        if (!calleeId) return NextResponse.json({ error: "calleeId requerido" }, { status: 400 });
+        const parsed = await parseBody(req, createCallSchema);
+        if (parsed.error) return parsed.error;
+        const { calleeId, callType } = parsed.data;
 
         // Verificar que son amigos
         const friendship = await db.query.friendships.findFirst({

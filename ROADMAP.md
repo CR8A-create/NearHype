@@ -13,7 +13,7 @@ Hoja de ruta priorizada de NearHype. Orden absoluto: compilar → ejecutar → e
 ## Fase 1 — Calidad y seguridad
 
 - [x] Auditoría de authz ruta por ruta — 2026-07-04. 4 vulnerabilidades corregidas: inyección SQL en discover (sql.raw con intereses del usuario), señales WebRTC sin comprobar participante, borrado de mensajes/comentarios sin verificar pertenencia a la comunidad/post de la URL. Cabeceras de seguridad añadidas en next.config.ts.
-- [x] Validación de inputs con Zod + límites de longitud en las 6 rutas de creación/edición de contenido (posts, comentarios, mensajes, DMs, comunidades) — 2026-07-04. Esquemas en `lib/validation.ts`; quedan rutas menores (onboarding, profile, preferences) con validación manual.
+- [x] Validación de inputs con Zod + límites de longitud en TODAS las rutas con body JSON (17 rutas) — 2026-07-04. Esquemas centralizados en `lib/validation.ts` con helper `parseBody`.
 - [x] Rate limiting básico en middleware (in-memory por usuario/IP: 300 lecturas y 60 escrituras por minuto; 429 + Retry-After) — 2026-07-04. Limitación por instancia documentada en lib/rateLimit.ts.
 - [x] Tests con Vitest para la lógica pura del feed (20 tests: deduplicación 3 niveles + diversificación) — 2026-07-04. La lógica se extrajo a `lib/feed/` (`types.ts`, `dedupe.ts`, `diversify.ts`); `npm test` / `npm run test:watch`.
 - [ ] Revisión de manejo de errores homogéneo en API routes

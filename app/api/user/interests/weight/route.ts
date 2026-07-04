@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { userInterests } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { interestWeightSchema, parseBody } from "@/lib/validation";
 
 const CLICK_DELTA = 0.15;
 const MIN_WEIGHT = 0.1;
@@ -35,16 +36,9 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "No autenticado" }, { status: 401 });
         }
 
-        const body = await req.json();
-        const { topic, action } = body;
-
-        if (!topic || typeof topic !== "string") {
-            return NextResponse.json({ error: "topic es requerido" }, { status: 400 });
-        }
-
-        if (action !== "click") {
-            return NextResponse.json({ error: "action debe ser 'click'" }, { status: 400 });
-        }
+        const parsed = await parseBody(req, interestWeightSchema);
+        if (parsed.error) return parsed.error;
+        const { topic } = parsed.data;
 
         // Fetch all user interests and find the one matching this category
         const allInterests = await db.query.userInterests.findMany({

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { users, userInterests, userLocations, userSettings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { onboardingSchema, parseBody } from "@/lib/validation";
 
 export async function POST(req: NextRequest) {
     try {
@@ -13,24 +14,9 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "No autenticado" }, { status: 401 });
         }
 
-        const body = await req.json();
-        const { interests, location, locationConsent } = body;
-
-        // Validaciones
-        if (!interests || !Array.isArray(interests) || interests.length < 3) {
-            return NextResponse.json(
-                { error: "Debes seleccionar al menos 3 intereses" },
-                { status: 400 }
-            );
-        }
-
-        // Si se proporciona ubicación, validar que tenga city
-        if (location && locationConsent && !location.city) {
-            return NextResponse.json(
-                { error: "La ubicación debe incluir una ciudad" },
-                { status: 400 }
-            );
-        }
+        const parsed = await parseBody(req, onboardingSchema);
+        if (parsed.error) return parsed.error;
+        const { interests, location, locationConsent } = parsed.data;
 
         // Verificar si el usuario ya existe
         let dbUser = await db.query.users.findFirst({

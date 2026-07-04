@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { updatePublicProfileSchema, parseBody } from "@/lib/validation";
 
 // PUT /api/user/profile/public - Actualizar perfil público
 export async function PUT(req: NextRequest) {
@@ -23,35 +24,9 @@ export async function PUT(req: NextRequest) {
             return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
         }
 
-        const {
-            bio,
-            bannerUrl,
-            publicInterests,
-            profileVisibility,
-            showLocation,
-        } = await req.json();
-
-        // Validaciones
-        if (bio && bio.length > 500) {
-            return NextResponse.json(
-                { error: "La bio no puede exceder 500 caracteres" },
-                { status: 400 }
-            );
-        }
-
-        if (profileVisibility && !['public', 'friends', 'private'].includes(profileVisibility)) {
-            return NextResponse.json(
-                { error: "Visibilidad de perfil inválida" },
-                { status: 400 }
-            );
-        }
-
-        if (publicInterests && (!Array.isArray(publicInterests) || publicInterests.length > 10)) {
-            return NextResponse.json(
-                { error: "Los intereses deben ser un array con máximo 10 elementos" },
-                { status: 400 }
-            );
-        }
+        const parsed = await parseBody(req, updatePublicProfileSchema);
+        if (parsed.error) return parsed.error;
+        const { bio, bannerUrl, publicInterests, profileVisibility, showLocation } = parsed.data;
 
         // Actualizar solo campos proporcionados
         const updateData: Partial<typeof users.$inferInsert> = { updatedAt: new Date() };

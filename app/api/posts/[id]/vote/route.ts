@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { communityPosts, postVotes, users } from "@/lib/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { voteSchema, parseBody } from "@/lib/validation";
 
 type Params = {
     params: Promise<{ id: string }>;
@@ -18,15 +19,9 @@ export async function POST(req: NextRequest, { params }: Params) {
             return NextResponse.json({ error: "No autenticado" }, { status: 401 });
         }
 
-        const body = await req.json();
-        const { voteType } = body; // "upvote" or "downvote"
-
-        if (voteType !== 'upvote' && voteType !== 'downvote') {
-            return NextResponse.json(
-                { error: "Tipo de voto inválido. Usa 'upvote' o 'downvote'" },
-                { status: 400 }
-            );
-        }
+        const parsed = await parseBody(req, voteSchema);
+        if (parsed.error) return parsed.error;
+        const { voteType } = parsed.data;
 
         const user = await db.query.users.findFirst({
             where: eq(users.clerkId, clerkId),

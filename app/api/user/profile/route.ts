@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { users, userInterests, userLocations } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { updateProfileSchema, parseBody } from "@/lib/validation";
 
 export async function GET() {
     try {
@@ -57,8 +58,9 @@ export async function PUT(req: NextRequest) {
             return NextResponse.json({ error: "No autenticado" }, { status: 401 });
         }
 
-        const body = await req.json();
-        const { interests, city, radiusKm, bio, avatarUrl } = body;
+        const parsed = await parseBody(req, updateProfileSchema);
+        if (parsed.error) return parsed.error;
+        const { interests, city, radiusKm, bio, avatarUrl } = parsed.data;
 
         // Actualizar datos básicos de perfil (bio, avatar)
         if (bio !== undefined || avatarUrl !== undefined) {

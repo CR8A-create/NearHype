@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { users, dmConversations, dmMessages } from "@/lib/db/schema";
 import { eq, or, and, isNull, desc } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { startDmSchema, parseBody } from "@/lib/validation";
 
 // GET /api/dms - Obtener lista de conversaciones
 export async function GET() {
@@ -93,15 +94,13 @@ export async function GET() {
 export async function POST(req: NextRequest) {
     try {
         const { userId: clerkId } = await auth();
-        const { targetUsername } = await req.json();
-
         if (!clerkId) {
             return NextResponse.json({ error: "No autenticado" }, { status: 401 });
         }
 
-        if (!targetUsername) {
-            return NextResponse.json({ error: "Username requerido" }, { status: 400 });
-        }
+        const parsed = await parseBody(req, startDmSchema);
+        if (parsed.error) return parsed.error;
+        const { targetUsername } = parsed.data;
 
         // 1. Obtener usuario actual
         const currentUser = await db.query.users.findFirst({

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { communities, communityMembers, users } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { updateCommunitySchema, parseBody } from "@/lib/validation";
 
 type Params = {
     params: Promise<{ slug: string }>;
@@ -192,15 +193,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
             );
         }
 
-        const body = await req.json();
-        const { name, description, iconUrl, category } = body;
-
-        if (!name || !name.trim()) {
-            return NextResponse.json(
-                { error: "El nombre es obligatorio" },
-                { status: 400 }
-            );
-        }
+        const parsed = await parseBody(req, updateCommunitySchema);
+        if (parsed.error) return parsed.error;
+        const { name, description, iconUrl, category } = parsed.data;
 
         // Actualizar comunidad
         await db.update(communities)

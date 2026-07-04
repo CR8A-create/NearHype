@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { users, profileSwipes, friendRequests } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { swipeSchema, parseBody } from "@/lib/validation";
 
 type Params = {
     params: Promise<{
@@ -30,11 +31,9 @@ export async function POST(req: NextRequest, { params }: Params) {
         }
 
         const { userId: targetUserId } = await params;
-        const { action } = await req.json(); // 'like' o 'skip'
-
-        if (!['like', 'skip'].includes(action)) {
-            return NextResponse.json({ error: "Acción inválida" }, { status: 400 });
-        }
+        const parsed = await parseBody(req, swipeSchema);
+        if (parsed.error) return parsed.error;
+        const { action } = parsed.data;
 
         // Verificar que el usuario objetivo existe
         const targetUser = await db.query.users.findFirst({
