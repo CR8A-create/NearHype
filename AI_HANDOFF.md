@@ -43,7 +43,9 @@ Red social hiperlocal (Next.js 16 App Router + React 19, Clerk, Drizzle + Neon P
 10. **Rate limiting** en `middleware.ts` + `lib/rateLimit.ts` (ventana deslizante in-memory, testeada): 300 lecturas y 60 escrituras por minuto por usuario (o IP anónima), respuesta 429 con `Retry-After`. Los límites de lectura son generosos a propósito: el polling de señales WebRTC durante una llamada ronda las 75 req/min.
 11. **Dependencias saneadas**: `npm audit fix` (actualizó `@clerk/nextjs` en el lockfile, eliminando las 2 críticas) + upgrade de Next 16.1.3 → **16.2.10** y `eslint-config-next` a juego (cierra 2 avisos altos de DoS). Quedan 15 avisos transitivos sin fix compatible (ver KNOWN_ISSUES). Verificado: tests, lint, tsc y build en verde con Next 16.2.10.
 12. **Validación Zod completada en el resto de rutas** (11 más: onboarding, profile, profile/public, preferences, interests/weight, friends/request, dms iniciar, calls crear/acción, vote, community PATCH, swipe). Todas las rutas con body JSON usan `parseBody(req, schema)`.
-13. Ver commits de esta fecha para el detalle de cada cambio.
+13. **Regresión crítica detectada y corregida con smoke test real**: tras el update de Clerk (lockfile), la landing `/` devolvía **500 en SSR** — `@clerk/nextjs` >= 6.39 rechaza `SignInButton`/`SignUpButton` usados directamente en Server Components (los children llegan serializados como array por la frontera RSC). Fix: nuevo `components/AuthButtons.tsx` ("use client") con `SignInCta`/`SignUpCta`; `app/page.tsx` los usa. **Patrón a seguir: los botones de Clerk siempre desde componentes cliente.**
+14. **Smoke test local**: la app arranca y la landing renderiza (verificado con navegador). Nota: `.env.local` contiene claves de **producción** de Clerk (dominio nearhype.com), por lo que el login no funciona en localhost — para e2e local hacen falta claves de una instancia de desarrollo de Clerk (documentado en KNOWN_ISSUES).
+15. Ver commits de esta fecha para el detalle de cada cambio.
 
 ## Decisiones de arquitectura vigentes
 

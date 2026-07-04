@@ -9,6 +9,8 @@ Siguiente objetivo concreto para quien retome el proyecto. Última actualizació
 
 ## Objetivo inmediato: verificación manual end-to-end
 
+> ⚠️ Bloqueada parcialmente: `.env.local` usa claves de producción de Clerk, el login no funciona en localhost (ver KNOWN_ISSUES). Hace falta que el usuario cree una instancia dev de Clerk o pruebe contra producción. El smoke test sin login (landing, arranque, SSR) se hizo el 2026-07-04 y destapó una regresión crítica de Clerk ya corregida.
+
 Con `npm run dev` (requiere `.env.local` completo), recorrer y anotar fallos en KNOWN_ISSUES.md:
 
 1. Onboarding (intereses + ubicación).

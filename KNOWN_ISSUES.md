@@ -16,6 +16,8 @@ Problemas conocidos y confirmados. Actualizar al resolver cada uno. Última actu
 
 ## Menores
 
+- **Login local no funciona**: `.env.local` tiene claves de producción de Clerk (restringidas al dominio nearhype.com). Para probar auth en localhost, crear una instancia de desarrollo en el dashboard de Clerk y usar sus claves `pk_test_`/`sk_test_` en `.env.local`. La verificación e2e manual completa está bloqueada por esto.
+
 - 32 warnings `@next/next/no-img-element` (`<img>` en vez de `next/image`). **Decisión pendiente (Fase 2)**: las imágenes del feed vienen de dominios arbitrarios; usar `next/image` requiere `remotePatterns` comodín y puede agotar la cuota de optimización de imágenes del free tier de Vercel. Evaluar `unoptimized`, un loader propio o mantener `<img loading="lazy">`.
 
 ## Deuda técnica / observaciones
