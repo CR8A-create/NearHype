@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { Loader2, MapPin, Calendar, Settings, MessageCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -36,13 +36,7 @@ export default function UserProfilePage() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState("");
 
-    useEffect(() => {
-        if (username) {
-            loadProfile();
-        }
-    }, [username]);
-
-    const loadProfile = async () => {
+    const loadProfile = useCallback(async () => {
         try {
             const res = await fetch(`/api/users/${username}`);
             const data = await res.json();
@@ -57,7 +51,13 @@ export default function UserProfilePage() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [username]);
+
+    useEffect(() => {
+        if (username) {
+            loadProfile();
+        }
+    }, [username, loadProfile]);
 
     if (isLoading) {
         return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Users, ChevronRight, ChevronLeft, Shield, Crown, Wrench } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
@@ -27,12 +27,24 @@ export default function MembersPanel({ communitySlug, isCollapsed, onToggle }: M
     const [isLoading, setIsLoading] = useState(true);
     const { user } = useUser();
 
+    const loadMembers = useCallback(async () => {
+        try {
+            const res = await fetch(`/api/communities/${communitySlug}/members`);
+            const data = await res.json();
+            setMembers(data.members || []);
+        } catch (error) {
+            console.error("Error loading members:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [communitySlug]);
+
     useEffect(() => {
         loadMembers();
         const handleClickOutside = () => setContextMenu(null);
         document.addEventListener('click', handleClickOutside);
         return () => document.removeEventListener('click', handleClickOutside);
-    }, []);
+    }, [loadMembers]);
 
     const handleContextMenu = (e: React.MouseEvent, memberUsername: string) => {
         e.preventDefault();
@@ -44,18 +56,6 @@ export default function MembersPanel({ communitySlug, isCollapsed, onToggle }: M
             y: e.clientY,
             memberUsername
         });
-    };
-
-    const loadMembers = async () => {
-        try {
-            const res = await fetch(`/api/communities/${communitySlug}/members`);
-            const data = await res.json();
-            setMembers(data.members || []);
-        } catch (error) {
-            console.error("Error loading members:", error);
-        } finally {
-            setIsLoading(false);
-        }
     };
 
     const getRoleBadge = (role: string) => {

@@ -13,7 +13,7 @@ Problemas conocidos y confirmados. Actualizar al resolver cada uno. Última actu
 
 ## Menores
 
-- ~40 warnings de lint (`no-unused-vars`, `<img>` en vez de `next/image`, deps de hooks incompletas).
+- 32 warnings `@next/next/no-img-element` (`<img>` en vez de `next/image`). **Decisión pendiente (Fase 2)**: las imágenes del feed vienen de dominios arbitrarios; usar `next/image` requiere `remotePatterns` comodín y puede agotar la cuota de optimización de imágenes del free tier de Vercel. Evaluar `unoptimized`, un loader propio o mantener `<img loading="lazy">`.
 
 ## Deuda técnica / observaciones
 

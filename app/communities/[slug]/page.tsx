@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useState, useCallback } from "react";
 import { Users, Plus, Loader2, MessageCircle, Shield } from "lucide-react";
 import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
@@ -58,12 +58,12 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
     const [isMembersPanelCollapsed, setIsMembersPanelCollapsed] = useState(false);
     const [showRoleManagement, setShowRoleManagement] = useState(false);
 
-    useEffect(() => {
-        loadCommunity();
-        loadPosts();
-    }, [slug]);
+    const showToast = useCallback((message: string, type: 'success' | 'error') => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 3000);
+    }, []);
 
-    const loadCommunity = async () => {
+    const loadCommunity = useCallback(async () => {
         try {
             const res = await fetch(`/api/communities/${slug}`);
             const data = await res.json();
@@ -76,9 +76,9 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [slug, showToast]);
 
-    const loadPosts = async () => {
+    const loadPosts = useCallback(async () => {
         try {
             const res = await fetch(`/api/communities/${slug}/posts`);
             const data = await res.json();
@@ -86,7 +86,12 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
         } catch (error) {
             console.error('Error loading posts:', error);
         }
-    };
+    }, [slug]);
+
+    useEffect(() => {
+        loadCommunity();
+        loadPosts();
+    }, [loadCommunity, loadPosts]);
 
     const handleJoinLeave = async () => {
         setIsJoining(true);
@@ -115,11 +120,6 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
         setPosts([newPost, ...posts]);
         setShowCreateModal(false);
         loadCommunity();
-    };
-
-    const showToast = (message: string, type: 'success' | 'error') => {
-        setToast({ message, type });
-        setTimeout(() => setToast(null), 3000);
     };
 
     const handleDelete = async () => {

@@ -63,19 +63,6 @@ export default function FeedPage() {
 
     useEffect(() => { loadFeed(); }, []);
 
-    // Infinite scroll
-    useEffect(() => {
-        const handleScroll = () => {
-            if (isLoadingMore) return;
-            setShowScrollTop(window.scrollY > 800);
-            if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 500) {
-                loadMore();
-            }
-        };
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, [displayedCount, feed, filterCategory, isLoadingMore]);
-
     const loadFeed = async () => {
         setIsLoading(true);
         setError("");
@@ -107,18 +94,7 @@ export default function FeedPage() {
         setIsRefreshing(false);
     };
 
-    const loadMore = useCallback(() => {
-        if (!feed || isLoadingMore) return;
-        const filtered = getFilteredItems();
-        if (displayedCount >= filtered.length) return;
-        setIsLoadingMore(true);
-        setTimeout(() => {
-            setDisplayedCount(prev => Math.min(prev + 10, filtered.length));
-            setIsLoadingMore(false);
-        }, 200);
-    }, [feed, isLoadingMore, displayedCount, filterCategory]);
-
-    const getFilteredItems = () => {
+    const getFilteredItems = useCallback(() => {
         if (!feed) return [];
         if (filterCategory === "all") return feed.items;
         return feed.items.filter(item => {
@@ -131,7 +107,32 @@ export default function FeedPage() {
             if (filterCategory === "news") return item.type === 'article';
             return item.category === filterCategory;
         });
-    };
+    }, [feed, filterCategory]);
+
+    const loadMore = useCallback(() => {
+        if (!feed || isLoadingMore) return;
+        const filtered = getFilteredItems();
+        if (displayedCount >= filtered.length) return;
+        setIsLoadingMore(true);
+        setTimeout(() => {
+            setDisplayedCount(prev => Math.min(prev + 10, filtered.length));
+            setIsLoadingMore(false);
+        }, 200);
+    }, [feed, isLoadingMore, displayedCount, getFilteredItems]);
+
+    // Infinite scroll
+    useEffect(() => {
+        const handleScroll = () => {
+            if (isLoadingMore) return;
+            setShowScrollTop(window.scrollY > 800);
+            if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 500) {
+                loadMore();
+            }
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, [loadMore, isLoadingMore]);
+
 
     const filteredItems = getFilteredItems().slice(0, displayedCount);
     const allCount = getFilteredItems().length;

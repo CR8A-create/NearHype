@@ -59,7 +59,7 @@ export default function FriendsPage() {
         if (activeTab === 'suggestions' && !suggestionsFetched) {
             loadSuggestions();
         }
-    }, [activeTab]);
+    }, [activeTab, suggestionsFetched]);
 
     const loadFriends = async () => {
         try {

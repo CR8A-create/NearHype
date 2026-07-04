@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { MessageCircle, X, Image as ImageIcon, Trash2 } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
@@ -33,21 +33,7 @@ export default function CommunityChat({ communitySlug }: { communitySlug: string
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
 
-    // Polling cada 3 segundos
-    useEffect(() => {
-        loadMessages();
-        const interval = setInterval(loadMessages, 3000);
-        return () => clearInterval(interval);
-    }, [communitySlug]);
-
-    // Auto-scroll al final cuando llegan nuevos mensajes
-    useEffect(() => {
-        if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-        }
-    }, [messages]);
-
-    const loadMessages = async () => {
+    const loadMessages = useCallback(async () => {
         try {
             const res = await fetch(`/api/communities/${communitySlug}/messages`);
             const data = await res.json();
@@ -55,7 +41,21 @@ export default function CommunityChat({ communitySlug }: { communitySlug: string
         } catch (error) {
             console.error('Error loading messages:', error);
         }
-    };
+    }, [communitySlug]);
+
+    // Polling cada 3 segundos
+    useEffect(() => {
+        loadMessages();
+        const interval = setInterval(loadMessages, 3000);
+        return () => clearInterval(interval);
+    }, [loadMessages]);
+
+    // Auto-scroll al final cuando llegan nuevos mensajes
+    useEffect(() => {
+        if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [messages]);
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();

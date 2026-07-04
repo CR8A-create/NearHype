@@ -23,7 +23,7 @@ export default function NotificationBell() {
     const [unreadCount, setUnreadCount] = useState(0);
     const [showDropdown, setShowDropdown] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [prevUnreadCount, setPrevUnreadCount] = useState(0);
+    const prevUnreadRef = useRef(0);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Cargar notificaciones
@@ -84,10 +84,10 @@ export default function NotificationBell() {
 
     // Detectar nueva notificación y reproducir sonido
     useEffect(() => {
-        if (unreadCount > prevUnreadCount) {
+        if (unreadCount > prevUnreadRef.current) {
             playNotificationSound();
         }
-        setPrevUnreadCount(unreadCount);
+        prevUnreadRef.current = unreadCount;
     }, [unreadCount]);
 
     // Cerrar dropdown al hacer click fuera

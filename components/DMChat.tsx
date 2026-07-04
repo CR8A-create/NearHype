@@ -60,6 +60,10 @@ export default function DMChat({ otherUser, currentUserId }: DMChatProps) {
             container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
     }, []);
 
+    const scrollToBottom = useCallback(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, []);
+
     const connectSSE = useCallback(() => {
         if (esRef.current) esRef.current.close();
 
@@ -106,19 +110,9 @@ export default function DMChat({ otherUser, currentUserId }: DMChatProps) {
             backoffRef.current = Math.min(backoffRef.current * 2, 30_000);
             setTimeout(connectSSE, delay);
         };
-    }, [otherUser.id]);
+    }, [otherUser.id, scrollToBottom]);
 
-    useEffect(() => {
-        sinceRef.current = new Date(Date.now() - 2000);
-        loadMessages();
-        connectSSE();
-        return () => {
-            esRef.current?.close();
-            esRef.current = null;
-        };
-    }, [otherUser.id, connectSSE]);
-
-    const loadMessages = async () => {
+    const loadMessages = useCallback(async () => {
         try {
             const res = await fetch(`/api/dms/${otherUser.id}`);
             const data = await res.json();
@@ -135,17 +129,24 @@ export default function DMChat({ otherUser, currentUserId }: DMChatProps) {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [otherUser.id, scrollToBottom]);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
+    useEffect(() => {
+        sinceRef.current = new Date(Date.now() - 2000);
+        loadMessages();
+        connectSSE();
+        return () => {
+            esRef.current?.close();
+            esRef.current = null;
+        };
+    }, [otherUser.id, connectSSE, loadMessages]);
 
     // Initial scroll to bottom
     useEffect(() => {
         if (!isLoading && messages.length > 0) {
             messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe saltar al final al terminar la carga inicial, no con cada mensaje nuevo
     }, [isLoading]);
 
     const handleSend = async (e: React.FormEvent) => {

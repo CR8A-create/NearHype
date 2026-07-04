@@ -1,19 +1,28 @@
 # NEXT_STEPS.md
 
-Siguiente objetivo concreto para quien retome el proyecto. Última actualización: 2026-07-04.
+Siguiente objetivo concreto para quien retome el proyecto. Última actualización: 2026-07-04 (sesión 2).
 
-## Estado: lint en verde ✅, build en verde ✅
+## Estado: Fase 0 casi cerrada
 
-El objetivo "0 errores de lint" se completó el 2026-07-04. Quedan ~40 **warnings** de lint (no bloqueantes).
+- Build ✅ · Lint 0 errores ✅ · tsc ✅
+- Warnings restantes: solo 32 × `no-img-element` (decisión documentada en KNOWN_ISSUES.md, se aborda en Fase 2).
 
-## Objetivo inmediato: cerrar la Fase 0 del ROADMAP
+## Objetivo inmediato: verificación manual end-to-end
 
-1. **Limpiar warnings de lint** (`npx eslint` sin `--quiet`): imports/variables sin usar, `<img>` → `next/image` (evaluar coste/beneficio en cada caso: `next/image` con dominios externos requiere configurar `remotePatterns` en `next.config.ts`), deps de hooks incompletas.
-2. **Verificación manual end-to-end** con `npm run dev`: onboarding, feed, comunidades (posts, comentarios, chat), DMs, llamadas, discover, amigos, notificaciones. Anotar cualquier fallo en KNOWN_ISSUES.md.
+Con `npm run dev` (requiere `.env.local` completo), recorrer y anotar fallos en KNOWN_ISSUES.md:
+
+1. Onboarding (intereses + ubicación).
+2. Feed: generación, filtros por categoría, scroll infinito, refresh.
+3. Comunidades: crear, unirse, posts (crear/editar/borrar/votar), comentarios y respuestas, chat en tiempo real, panel de miembros y roles.
+4. DMs: conversación, SSE en tiempo real, envío de imágenes.
+5. Llamadas: audio y vídeo entre dos cuentas (CallRoom fue refactorizado en esta sesión — probar especialmente).
+6. Discover (swipe de perfiles), amigos (solicitudes, aceptar/rechazar, sugerencias), notificaciones (campana + SSE + sonido).
+
+**Atención especial**: en esta sesión se refactorizaron los efectos de `CommunityChat`, `MembersPanel`, `RoleManagementPanel`, `communities/[slug]/page`, `feed/page`, `DMChat`, `NotificationBell`, `SettingsModal` y `users/[username]/page` (loaders a `useCallback`). El riesgo típico de regresión sería un bucle de refetch (red en bucle en DevTools) o datos que no se recargan al cambiar de slug/usuario.
 
 ## Después (Fase 1 — seguridad y tests)
 
-- Auditoría de authz ruta por ruta (¿cada endpoint valida propiedad del recurso?).
+- Auditoría de authz ruta por ruta. Nota previa detectada: `app/api/communities/[slug]/messages/route.ts` (GET) y `app/api/users/[username]/similar/route.ts` llaman a `auth()` sin comprobar el resultado — revisar si el middleware es suficiente en cada caso.
 - Validación de inputs con Zod en todas las rutas POST/PATCH.
 - Tests con Vitest para la lógica pura del feed (deduplicación, diversificación).
 - Rate limiting básico con solución gratuita.
@@ -23,4 +32,5 @@ El objetivo "0 errores de lint" se completó el 2026-07-04. Quedan ~40 **warning
 - No hay tests: build + lint + prueba manual son la única red de seguridad.
 - Presupuesto 0 €: no añadir servicios de pago.
 - Leer `AI_HANDOFF.md` y `KNOWN_ISSUES.md` primero.
-- Los tipos de las APIs externas viven en cada fetcher de `lib/apis/`; la forma común de artículo es `ExternalArticle` en `lib/apis/types.ts`.
+- La forma común de artículo externo es `ExternalArticle` en `lib/apis/types.ts`.
+- Los commits locales NO están pusheados (el usuario pidió no hacer push todavía).

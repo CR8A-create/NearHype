@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { X, Plus, MapPin, Loader2, Sparkles, User, Settings as SettingsIcon, Save, Palette, Check, Type } from "lucide-react";
 import ImageUpload from "./ImageUpload";
 import { useUser } from "@clerk/nextjs";
@@ -43,11 +43,7 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
     const [avatarKey, setAvatarKey] = useState(""); // For uploadthing
     const [previewAvatar, setPreviewAvatar] = useState<string | null>(null);
 
-    useEffect(() => {
-        loadProfile();
-    }, []);
-
-    const loadProfile = async () => {
+    const loadProfile = useCallback(async () => {
         try {
             const res = await fetch("/api/user/profile");
             const data = await res.json();
@@ -65,7 +61,11 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [user?.imageUrl]);
+
+    useEffect(() => {
+        loadProfile();
+    }, [loadProfile]);
 
     const handleAddInterest = () => {
         if (!newInterest.trim() || !profile) return;

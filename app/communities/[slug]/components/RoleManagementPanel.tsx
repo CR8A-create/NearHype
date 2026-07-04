@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Shield, Crown, Wrench, User, X, Loader2 } from "lucide-react";
 
 type Member = {
@@ -23,11 +23,7 @@ export default function RoleManagementPanel({ communitySlug, currentUserRole, on
     const [isUpdating, setIsUpdating] = useState<string | null>(null);
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-    useEffect(() => {
-        loadMembers();
-    }, [communitySlug]);
-
-    const loadMembers = async () => {
+    const loadMembers = useCallback(async () => {
         try {
             const res = await fetch(`/api/communities/${communitySlug}/members`);
             const data = await res.json();
@@ -37,7 +33,11 @@ export default function RoleManagementPanel({ communitySlug, currentUserRole, on
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [communitySlug]);
+
+    useEffect(() => {
+        loadMembers();
+    }, [loadMembers]);
 
     const handleRoleChange = async (member: Member, newRole: string) => {
         setIsUpdating(member.id);

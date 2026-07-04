@@ -7,7 +7,7 @@ Hoja de ruta priorizada de NearHype. Orden absoluto: compilar → ejecutar → e
 - [x] Verificar que el proyecto compila (`npm run build`) — 2026-07-04
 - [x] Infraestructura de continuidad (AI_HANDOFF, ROADMAP, NEXT_STEPS, KNOWN_ISSUES) — 2026-07-04
 - [x] Lint en verde: 54 errores corregidos (incl. 3 bugs de hooks: CallRoom, IncomingCallModal, GlobalHeader) — 2026-07-04
-- [ ] Limpiar los ~40 warnings de lint
+- [x] Limpiar warnings de lint: quedan solo 32 × `no-img-element`, diferidos a Fase 2 — 2026-07-04
 - [ ] Verificación manual end-to-end con dev server (feed, comunidades, DMs, llamadas, discover)
 
 ## Fase 1 — Calidad y seguridad

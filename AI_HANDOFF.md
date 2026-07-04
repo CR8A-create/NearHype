@@ -12,7 +12,7 @@ Red social hiperlocal (Next.js 16 App Router + React 19, Clerk, Drizzle + Neon P
 | Verificación | Resultado |
 |---|---|
 | `npm run build` | ✅ Pasa |
-| `npm run lint` | ✅ 0 errores (~40 warnings pendientes) |
+| `npm run lint` | ✅ 0 errores; 32 warnings (todos `no-img-element`, decisión diferida a Fase 2) |
 | `npx tsc --noEmit` | ✅ Pasa |
 | Tests automatizados | ⚠️ No existen |
 
@@ -30,7 +30,9 @@ Red social hiperlocal (Next.js 16 App Router + React 19, Clerk, Drizzle + Neon P
    - `schema.ts`: `AnyPgColumn` en FKs auto-referenciadas.
    - Feed route: eliminados los casts `as any[]` (los fetchers ya están tipados); corregidos dos accesos a campos inexistentes (`item.extract`/`item.thumbnail` → `description`/`socialimage`) en el bloque Wikipedia.
    - Componentes: nuevo tipo `CommentData` exportado desde `Comments.tsx` y usado en `PostCard`/`EnhancedCommentInput`; `catch (err: any)` → narrowing con `instanceof Error`.
-5. Ver commits de esta fecha para el detalle de cada cambio.
+5. **Código muerto y sin uso eliminado** (~50 warnings): bloque `FriendsList` inalcanzable en `GlobalHeader` (superado por la página de amigos), `searchYouTubeRSS` (siempre devolvía `[]`), función muerta en `orchestrator.ts`, imports/params/vars sin uso en ~35 archivos.
+6. **Deps de hooks saneadas** (12 warnings `exhaustive-deps` → 0): los loaders (`loadMessages`, `loadMembers`, `loadCommunity`, `loadPosts`, `loadProfile`, `loadMore`, `getFilteredItems`, `connectSSE`/`scrollToBottom`) ahora son `useCallback` declarados antes de los efectos que los usan y están en sus arrays de deps. `NotificationBell` usa un ref para el contador previo. Un único `eslint-disable` justificado queda en `DMChat` (scroll inicial intencionadamente solo al cargar).
+7. Ver commits de esta fecha para el detalle de cada cambio.
 
 ## Decisiones de arquitectura vigentes
 
