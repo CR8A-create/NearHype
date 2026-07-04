@@ -12,7 +12,7 @@ type Params = {
 export async function GET(req: NextRequest, { params }: Params) {
     try {
         const { slug } = await params;
-        const { userId: clerkId } = await auth();
+        await auth();
 
         const community = await db.query.communities.findFirst({
             where: eq(communities.slug, slug),
@@ -48,7 +48,6 @@ export async function GET(req: NextRequest, { params }: Params) {
             .limit(50);
 
         // Obtener datos de los mensajes a los que responden (si existen)
-        const messageIds = messagesResult.map(m => m.id);
         const replyToIds = messagesResult
             .map(m => m.replyToId)
             .filter((id): id is string => id !== null);

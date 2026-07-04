@@ -4,10 +4,10 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { users, friendRequests } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 // GET /api/friends/requests - Ver solicitudes pendientes recibidas
-export async function GET(req: NextRequest) {
+export async function GET() {
     try {
         const { userId: clerkId } = await auth();
 

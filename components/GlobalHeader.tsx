@@ -8,7 +8,6 @@ import { useState, useEffect, useRef } from "react";
 import SettingsModal from "./SettingsModal";
 import NotificationBell from "./NotificationBell";
 import FriendRequestsModal from "./FriendRequestsModal";
-import FriendsList from "./FriendsList";
 import IncomingCallModal from "./IncomingCallModal";
 import BottomNav from "./BottomNav";
 
@@ -18,7 +17,6 @@ export default function GlobalHeader() {
     const { user } = useUser();
     const [showSettingsModal, setShowSettingsModal] = useState(false);
     const [showFriendRequests, setShowFriendRequests] = useState(false);
-    const [showFriendsList, setShowFriendsList] = useState(false);
 
     // Notification states
     const [unreadMessages, setUnreadMessages] = useState(0);
@@ -67,7 +65,6 @@ export default function GlobalHeader() {
             cancelled = true;
             clearInterval(interval);
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- playNotificationSound is stable in practice
     }, [user]);
 
     const isActive = (path: string) => {
@@ -215,13 +212,6 @@ export default function GlobalHeader() {
                 <FriendRequestsModal
                     onClose={() => setShowFriendRequests(false)}
                 />
-            )}
-
-            {/* Sidebar de amigos - solo desktop */}
-            {showFriendsList && (
-                <div className="hidden md:block">
-                    <FriendsList />
-                </div>
             )}
 
             {/* Bottom navigation bar - mobile only */}

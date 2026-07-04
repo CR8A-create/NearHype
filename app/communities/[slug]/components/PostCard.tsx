@@ -27,7 +27,7 @@ type Post = {
 };
 
 // Post Options Menu (Edit/Delete)
-function PostOptionsMenu({ post, userRole, communitySlug }: { post: Post; userRole: string | null; communitySlug: string }) {
+function PostOptionsMenu({ post, userRole }: { post: Post; userRole: string | null }) {
     const { user } = useUser();
     const [showMenu, setShowMenu] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
@@ -284,7 +284,7 @@ function EditPostModal({ post, onClose, onSaved }: { post: Post; onClose: () => 
 }
 
 // Main PostCard Component
-export default function PostCard({ post, communitySlug, userRole }: { post: Post; communitySlug: string; userRole: string | null }) {
+export default function PostCard({ post, userRole }: { post: Post; communitySlug?: string; userRole: string | null }) {
     const [voteType, setVoteType] = useState<'upvote' | 'downvote' | null>(null);
     const [upvotes, setUpvotes] = useState(post.upvotes);
     const [downvotes, setDownvotes] = useState(post.downvotes);
@@ -406,7 +406,7 @@ export default function PostCard({ post, communitySlug, userRole }: { post: Post
                         <h3 className="text-white font-bold text-lg hover:text-indigo-400 cursor-pointer flex-1">
                             {post.title}
                         </h3>
-                        <PostOptionsMenu post={post} userRole={userRole} communitySlug={communitySlug} />
+                        <PostOptionsMenu post={post} userRole={userRole} />
                     </div>
                     {post.content && (
                         <div>

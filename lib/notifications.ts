@@ -1,7 +1,7 @@
 // lib/notifications.ts - Helper para crear notificaciones
 
 import { db } from "@/lib/db";
-import { notifications, type NewNotification } from "@/lib/db/schema";
+import { notifications } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 export type NotificationType =

@@ -1,12 +1,12 @@
 import { getOrCreateUser } from "@/lib/getOrCreateUser";
 import { db } from "@/lib/db";
-import { users, userInterests, userLocations, feedCache, communityPosts, communities } from "@/lib/db/schema";
+import { users, feedCache, communityPosts, communities } from "@/lib/db/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { fetchInterestNews } from "@/lib/apis/newsapi";
 import { fetchWikipediaForInterests } from "@/lib/apis/wikipedia";
 import crypto from "crypto";
-import { searchDuckDuckGo, searchGoogleNewsRSS } from "@/lib/apis/free_search";
+import { searchGoogleNewsRSS } from "@/lib/apis/free_search";
 import { searchYouTubeVideos } from "@/lib/apis/youtube";
 import { fetchRedditForInterests } from "@/lib/apis/reddit";
 import { getGamesByInterests } from "@/lib/apis/gaming";
@@ -519,7 +519,7 @@ export async function GET() {
 
         // ====== DIVERSIFICATION ALGORITHM ======
         // This is the "TikTok/YouTube algorithm" — ensures variety in the feed
-        const diversified = diversifyFeed(unique, interests);
+        const diversified = diversifyFeed(unique);
 
         // ====== CACHE ======
         const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 min
@@ -550,7 +550,7 @@ export async function GET() {
 
 // ====== DIVERSIFICATION ALGORITHM ======
 // Ensures the feed feels like TikTok/YouTube — varied, engaging, never boring
-function diversifyFeed(items: ContentItem[], interests: string[]): ContentItem[] {
+function diversifyFeed(items: ContentItem[]): ContentItem[] {
     // Group by type
     const byType: Record<string, ContentItem[]> = {};
     for (const item of items) {

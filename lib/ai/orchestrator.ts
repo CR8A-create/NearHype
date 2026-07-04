@@ -250,11 +250,3 @@ function getSubredditsFromInterest(interest: string): string[] {
     return mapping[normalized] || [];
 }
 
-function getSubredditsFromInterests(interests: string[]): string[] {
-    const subs = new Set<string>();
-    interests.forEach(interest => {
-        const found = getSubredditsFromInterest(interest);
-        found.forEach(sub => subs.add(sub));
-    });
-    return Array.from(subs).slice(0, 10); // Aumentado de 5 a 10
-}

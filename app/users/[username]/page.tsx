@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
-import { Loader2, MapPin, Users, Calendar, Settings, MessageCircle, ArrowLeft } from "lucide-react";
+import { Loader2, MapPin, Calendar, Settings, MessageCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import AddFriendButton from "@/components/AddFriendButton";
 import SimilarUsers from "./components/SimilarUsers";
@@ -31,7 +30,6 @@ type UserProfile = {
 
 export default function UserProfilePage() {
     const params = useParams();
-    const { user: clerkUser } = useUser();
     const username = params?.username as string;
 
     const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -54,7 +52,7 @@ export default function UserProfilePage() {
             } else {
                 setError(data.error || "Error al cargar perfil");
             }
-        } catch (err) {
+        } catch {
             setError("Error al cargar perfil");
         } finally {
             setIsLoading(false);

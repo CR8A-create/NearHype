@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { MapPin, Sparkles, Check } from "lucide-react";
 
@@ -20,7 +19,6 @@ const PRESET_CATEGORIES = [
 type OnboardingStep = 'interests' | 'location' | 'complete';
 
 export default function OnboardingPage() {
-    const { user } = useUser();
     const router = useRouter();
 
     const [step, setStep] = useState<OnboardingStep>('interests');

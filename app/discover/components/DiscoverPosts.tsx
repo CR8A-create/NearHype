@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { TrendingUp, Heart, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useUser } from "@clerk/nextjs";
 
 type Post = {
     id: string;
@@ -23,7 +22,6 @@ type Post = {
 };
 
 export default function DiscoverPosts() {
-    const { user } = useUser();
     const [posts, setPosts] = useState<Post[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 

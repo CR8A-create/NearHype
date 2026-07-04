@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Bell, Check, CheckCheck } from "lucide-react";
+import { Bell, CheckCheck } from "lucide-react";
 import Link from "next/link";
 
 type Notification = {
@@ -189,7 +189,7 @@ export default function NotificationBell() {
     };
 
     // Icono según tipo
-    const getIcon = (type: string) => {
+    const getIcon = () => {
         // Podemos expandir esto con más iconos personalizados
         return <Bell className="w-4 h-4" />;
     };
@@ -260,7 +260,7 @@ export default function NotificationBell() {
                                                 />
                                             ) : (
                                                 <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white">
-                                                    {getIcon(notif.type)}
+                                                    {getIcon()}
                                                 </div>
                                             )}
 

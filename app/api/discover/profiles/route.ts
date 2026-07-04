@@ -3,11 +3,11 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { users, userLocations, userInterests, communityMembers, profileSwipes, friendships, friendRequests } from "@/lib/db/schema";
-import { eq, and, or, isNull, notInArray, sql, ne, inArray } from "drizzle-orm";
-import { NextRequest, NextResponse } from "next/server";
+import { eq, and, or, notInArray, sql, ne, inArray } from "drizzle-orm";
+import { NextResponse } from "next/server";
 
 // GET /api/discover/profiles - Obtener perfiles recomendados
-export async function GET(req: NextRequest) {
+export async function GET() {
     try {
         const { userId: clerkId } = await auth();
 

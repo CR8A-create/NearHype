@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Image, Link2, Smile, Loader2, X } from "lucide-react";
+import { Image as ImageIcon, Smile, Loader2, X } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 import type { CommentData } from "./Comments";
 
@@ -135,7 +135,7 @@ export default function EnhancedCommentInput({ postId, parentCommentId, onCommen
                         className={`p-2 rounded-lg transition ${showImageUpload || mediaUrl ? 'bg-indigo-500/20 text-indigo-400' : 'text-gray-400 hover:bg-white/10 hover:text-white'}`}
                         title="Subir imagen"
                     >
-                        <Image className="w-5 h-5" />
+                        <ImageIcon className="w-5 h-5" />
                     </button>
 
 

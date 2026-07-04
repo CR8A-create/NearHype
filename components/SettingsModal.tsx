@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Plus, Trash2, MapPin, Loader2, Sparkles, User, Settings as SettingsIcon, Camera, Save, Palette, Check, Type } from "lucide-react";
+import { X, Plus, MapPin, Loader2, Sparkles, User, Settings as SettingsIcon, Save, Palette, Check, Type } from "lucide-react";
 import ImageUpload from "./ImageUpload";
 import { useUser } from "@clerk/nextjs";
 import { useTheme, ACCENT_PRESETS } from "./ThemeProvider";

@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { communityPosts, postComments, users, postVotes } from "@/lib/db/schema";
+import { communityPosts, postComments, users } from "@/lib/db/schema";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { communityPosts, communities, users, userInterests, communityMembers } from "@/lib/db/schema";
+import { communityPosts, communities, users, userInterests } from "@/lib/db/schema";
 import { eq, inArray, desc, sql } from "drizzle-orm";
 
 /**

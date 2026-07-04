@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
-import { MapPin, Edit, Save, X, Plus, Trash2, Globe } from "lucide-react";
+import { MapPin, Edit, Save, X, Plus, Globe } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -88,7 +88,7 @@ export default function SettingsPage() {
                 lon: position.coords.longitude,
             });
             setLocationConsent(true);
-        } catch (err) {
+        } catch {
             setError("No se pudo obtener tu ubicación");
         }
     };
@@ -118,7 +118,7 @@ export default function SettingsPage() {
 
             setSuccess("Cambios guardados correctamente");
             setTimeout(() => router.push('/feed'), 1500);
-        } catch (err) {
+        } catch {
             setError("Error al guardar los cambios");
         } finally {
             setIsSaving(false);

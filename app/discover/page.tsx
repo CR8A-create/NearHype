@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles, TrendingUp, Users } from "lucide-react";
+import { TrendingUp, Users } from "lucide-react";
 import GlobalHeader from "@/components/GlobalHeader";
 import DiscoverPosts from "./components/DiscoverPosts";
 import DiscoverPeople from "./components/DiscoverPeople";

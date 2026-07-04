@@ -1,13 +1,13 @@
 // app/api/notifications/stream/route.ts — SSE for real-time notification count
 export const dynamic = 'force-dynamic';
 
-import { NextRequest } from "next/server";
+
 import { getOrCreateUser } from "@/lib/getOrCreateUser";
 import { db } from "@/lib/db";
 import { notifications } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
     // Auth MUST happen outside ReadableStream constructor (Clerk context)
     const user = await getOrCreateUser();
     if (!user) {

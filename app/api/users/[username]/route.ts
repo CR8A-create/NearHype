@@ -2,7 +2,7 @@
 
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { users, friendships, userLocations, communityMembers } from "@/lib/db/schema";
+import { users, friendships, communityMembers } from "@/lib/db/schema";
 import { eq, or, and } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 

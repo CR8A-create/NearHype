@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { MessageCircle, X, Image as ImageIcon, Trash2, MoreVertical } from "lucide-react";
+import { MessageCircle, X, Image as ImageIcon, Trash2 } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import ImageUpload from "@/components/ImageUpload";
 
@@ -88,11 +88,6 @@ export default function CommunityChat({ communitySlug }: { communitySlug: string
         } finally {
             setIsSending(false);
         }
-    };
-
-    const formatTime = (timestamp: string) => {
-        const date = new Date(timestamp);
-        return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
     };
 
     return (

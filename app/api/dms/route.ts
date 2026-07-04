@@ -7,7 +7,7 @@ import { eq, or, and, isNull, desc } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 // GET /api/dms - Obtener lista de conversaciones
-export async function GET(req: NextRequest) {
+export async function GET() {
     try {
         const { userId: clerkId } = await auth();
 

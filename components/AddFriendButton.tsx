@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { UserPlus, Check, Clock, Loader2 } from "lucide-react";
+import { UserPlus, Clock, Loader2 } from "lucide-react";
 
 type AddFriendButtonProps = {
     username: string;

@@ -1,6 +1,6 @@
 import { getOrCreateUser } from "@/lib/getOrCreateUser";
 import { db } from "@/lib/db";
-import { users, userInterests, userLocations, userSettings } from "@/lib/db/schema";
+import { users, userInterests, userLocations } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 

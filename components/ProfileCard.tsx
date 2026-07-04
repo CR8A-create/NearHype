@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, MouseEvent, TouchEvent } from "react";
-import { MapPin, Heart, X } from "lucide-react";
+import { MapPin } from "lucide-react";
 
 type Profile = {
     id: string;

@@ -13,7 +13,7 @@ type Params = {
 
 export async function GET(req: NextRequest, { params }: Params) {
     try {
-        const { userId: clerkId } = await auth();
+        await auth();
         const { username } = await params;
 
         // 1. Obtener el usuario target para saber sus intereses

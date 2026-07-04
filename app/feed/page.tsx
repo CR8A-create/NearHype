@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import {
-    MapPin, Sparkles, RefreshCw, TrendingUp,
+    MapPin, Sparkles, RefreshCw,
     ExternalLink, Play, MessageSquare, Gamepad2,
-    Lightbulb, Target, Newspaper, Music, Globe, ArrowUp, Users, Calendar
+    Lightbulb, Target, Newspaper, Globe, ArrowUp, Users, Calendar
 } from "lucide-react";
 import Link from "next/link";
 import GlobalHeader from "@/components/GlobalHeader";
@@ -51,7 +50,6 @@ type FeedResponse = {
 };
 
 export default function FeedPage() {
-    const { user } = useUser();
     const router = useRouter();
     const [feed, setFeed] = useState<FeedResponse | null>(null);
     const [isLoading, setIsLoading] = useState(true);

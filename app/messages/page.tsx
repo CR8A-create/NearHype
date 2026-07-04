@@ -2,7 +2,6 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
 import { MessageCircle, Loader2, Search, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import DMChat from "@/components/DMChat";
@@ -37,7 +36,6 @@ export default function MessagesPageWrapper() {
 }
 
 function MessagesPage() {
-    const { user: clerkUser } = useUser();
     const searchParams = useSearchParams();
     const userParam = searchParams?.get('user');
 

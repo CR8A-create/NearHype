@@ -148,7 +148,7 @@ export default function CallRoom({ roomId }: CallRoomProps) {
                 });
             }
 
-            createPeerConnection(stream, data.isCaller, data.currentUserId);
+            createPeerConnection(stream, data.isCaller);
             startSignalPolling();
 
             // Caller: wait for callee to join before creating offer
@@ -186,7 +186,7 @@ export default function CallRoom({ roomId }: CallRoomProps) {
         // eslint-disable-next-line react-hooks/exhaustive-deps -- initCall/cleanup are stable per mount; the call must only re-run when the room changes
     }, [roomId]);
 
-    const createPeerConnection = (stream: MediaStream, amICaller: boolean, _myUserId: string) => {
+    const createPeerConnection = (stream: MediaStream, amICaller: boolean) => {
         const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
         peerConnectionRef.current = pc;
 

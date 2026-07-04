@@ -80,7 +80,7 @@ function parseDuckDuckGoHTML(html: string): SearchResult[] {
             try {
                 const urlParams = new URLSearchParams(url.split('?')[1]);
                 url = decodeURIComponent(urlParams.get('uddg') || url);
-            } catch (e) {
+            } catch {
                 // Fallback si falla el parseo
             }
         }
@@ -99,7 +99,7 @@ function parseDuckDuckGoHTML(html: string): SearchResult[] {
         let source = 'Web';
         try {
             source = new URL(url).hostname.replace('www.', '');
-        } catch (e) { }
+        } catch { /* dominio no parseable */ }
 
         results.push({
             title,

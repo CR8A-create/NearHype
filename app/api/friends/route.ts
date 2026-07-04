@@ -3,11 +3,11 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { users, friendships } from "@/lib/db/schema";
-import { eq, or, and } from "drizzle-orm";
-import { NextRequest, NextResponse } from "next/server";
+import { eq, or } from "drizzle-orm";
+import { NextResponse } from "next/server";
 
 // GET /api/friends - Obtener lista de amigos
-export async function GET(req: NextRequest) {
+export async function GET() {
     try {
         const { userId: clerkId } = await auth();
 

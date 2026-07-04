@@ -67,22 +67,10 @@ export async function searchYouTubeVideos(query: string, maxResults: number = 5)
             }
         }
 
-        // Approach 2: YouTube RSS feed (limited but reliable)
-        return await searchYouTubeRSS(query, maxResults);
+        // Sin Invidious disponible no hay alternativa gratuita fiable server-side
+        return [];
     } catch (error) {
         console.error('YouTube search error:', error);
-        return [];
-    }
-}
-
-async function searchYouTubeRSS(query: string, maxResults: number): Promise<YouTubeVideo[]> {
-    try {
-        // Use Google RSS to get YouTube results
-        const rssUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&sp=CAI%253D`;
-        // This won't work server-side without parsing HTML, so we use a simpler approach
-        // Return empty - Invidious is the main approach
-        return [];
-    } catch {
         return [];
     }
 }

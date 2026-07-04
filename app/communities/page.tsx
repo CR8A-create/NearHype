@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapPin, Users, ExternalLink, Search, Plus, Loader2 } from "lucide-react";
+import { Users, Search, Plus, Loader2 } from "lucide-react";
 import Link from "next/link";
 import GlobalHeader from "@/components/GlobalHeader";
 

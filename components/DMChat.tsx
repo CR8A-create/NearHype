@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Send, Loader2, Image as ImageIcon, X, Phone, Video } from "lucide-react";
+import { Send, Loader2, Image as Phone, Video } from "lucide-react";
 
 type Message = {
     id: string;
@@ -22,7 +22,7 @@ type DMChatProps = {
     currentUserId: string;
 };
 
-export default function DMChat({ conversationId, otherUser, currentUserId }: DMChatProps) {
+export default function DMChat({ otherUser, currentUserId }: DMChatProps) {
     const router = useRouter();
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState("");

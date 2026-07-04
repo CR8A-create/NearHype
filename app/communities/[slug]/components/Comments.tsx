@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
-import { useUser } from "@clerk/nextjs";
 
 // Forma de un comentario tal y como lo devuelve /api/posts/[id]/comments
 export interface CommentData {
@@ -34,7 +33,6 @@ export function CommentsList({ comments, postId }: { comments: CommentData[]; po
 
 // Single Comment Component
 export function Comment({ comment, postId, isReply = false }: { comment: CommentData; postId: string; isReply?: boolean }) {
-    const { user } = useUser();
     const [showReplyForm, setShowReplyForm] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [localReplies, setLocalReplies] = useState<CommentData[]>(comment.replies || []);
