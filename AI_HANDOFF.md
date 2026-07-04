@@ -32,7 +32,13 @@ Red social hiperlocal (Next.js 16 App Router + React 19, Clerk, Drizzle + Neon P
    - Componentes: nuevo tipo `CommentData` exportado desde `Comments.tsx` y usado en `PostCard`/`EnhancedCommentInput`; `catch (err: any)` → narrowing con `instanceof Error`.
 5. **Código muerto y sin uso eliminado** (~50 warnings): bloque `FriendsList` inalcanzable en `GlobalHeader` (superado por la página de amigos), `searchYouTubeRSS` (siempre devolvía `[]`), función muerta en `orchestrator.ts`, imports/params/vars sin uso en ~35 archivos.
 6. **Deps de hooks saneadas** (12 warnings `exhaustive-deps` → 0): los loaders (`loadMessages`, `loadMembers`, `loadCommunity`, `loadPosts`, `loadProfile`, `loadMore`, `getFilteredItems`, `connectSSE`/`scrollToBottom`) ahora son `useCallback` declarados antes de los efectos que los usan y están en sus arrays de deps. `NotificationBell` usa un ref para el contador previo. Un único `eslint-disable` justificado queda en `DMChat` (scroll inicial intencionadamente solo al cargar).
-7. Ver commits de esta fecha para el detalle de cada cambio.
+7. **Auditoría de seguridad (authz) — 4 vulnerabilidades corregidas**:
+   - **Inyección SQL** en `app/api/discover/route.ts`: `sql.raw` interpolaba los intereses del usuario (texto libre) directamente en un `IN (...)`. Ahora parametrizado.
+   - `app/api/calls/[roomId]/signal/route.ts` (POST): cualquier usuario autenticado podía inyectar señales WebRTC en cualquier llamada. Ahora exige ser participante.
+   - `app/api/communities/[slug]/messages/[id]/route.ts` (DELETE): un mod de la comunidad A podía borrar mensajes de la B (el mensaje no se verificaba contra el slug). Ahora se comprueba `message.communityId`.
+   - `app/api/posts/[id]/comments/[commentId]/route.ts` (DELETE): mismo patrón con comentarios (`comment.postId` sin verificar).
+   - Además: cabeceras de seguridad básicas en `next.config.ts` (nosniff, Permissions-Policy con cámara/micro para llamadas, Referrer-Policy, X-Frame-Options, HSTS). Verificado también: uploads (auth + límites), DMs y llamadas exigen amistad, roles de comunidad bien escalonados, sin `dangerouslySetInnerHTML`, resto de SQL parametrizado.
+8. Ver commits de esta fecha para el detalle de cada cambio.
 
 ## Decisiones de arquitectura vigentes
 

@@ -28,6 +28,12 @@ export async function POST(
 
         if (!room) return NextResponse.json({ error: "Sala no encontrada" }, { status: 404 });
 
+        // Solo los participantes de la llamada pueden enviar señales; sin esta
+        // comprobación cualquier usuario autenticado podría inyectar ofertas/ICE
+        if (room.callerId !== currentUser.id && room.calleeId !== currentUser.id) {
+            return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+        }
+
         // Determinar el destinatario
         const toUserId = room.callerId === currentUser.id ? room.calleeId : room.callerId;
 

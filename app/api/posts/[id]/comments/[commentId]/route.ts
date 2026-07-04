@@ -36,7 +36,9 @@ export async function DELETE(req: NextRequest, { params }: Params) {
             where: eq(postComments.id, commentId),
         });
 
-        if (!comment) {
+        // El comentario debe pertenecer al post de la URL; si no, un moderador
+        // podría borrar comentarios de otras comunidades usando su propio postId
+        if (!comment || comment.postId !== postId) {
             return NextResponse.json({ error: "Comentario no encontrado" }, { status: 404 });
         }
 

@@ -12,7 +12,8 @@ Hoja de ruta priorizada de NearHype. Orden absoluto: compilar → ejecutar → e
 
 ## Fase 1 — Calidad y seguridad
 
-- [ ] Auditoría de seguridad ruta por ruta: authz (¿cada ruta valida propiedad del recurso?), validación de inputs con Zod, cabeceras HTTP
+- [x] Auditoría de authz ruta por ruta — 2026-07-04. 4 vulnerabilidades corregidas: inyección SQL en discover (sql.raw con intereses del usuario), señales WebRTC sin comprobar participante, borrado de mensajes/comentarios sin verificar pertenencia a la comunidad/post de la URL. Cabeceras de seguridad añadidas en next.config.ts.
+- [ ] Validación de inputs con Zod + límites de longitud en rutas POST/PATCH
 - [ ] Rate limiting básico (solución gratuita: middleware propio o `@upstash/ratelimit` free tier / in-memory)
 - [ ] Introducir tests (Vitest) para lógica pura: deduplicación del feed, diversificación, helpers
 - [ ] Revisión de manejo de errores homogéneo en API routes

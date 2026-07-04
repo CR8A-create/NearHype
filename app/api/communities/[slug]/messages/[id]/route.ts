@@ -45,7 +45,9 @@ export async function DELETE(req: NextRequest, { params }: Params) {
             where: eq(communityMessages.id, messageId),
         });
 
-        if (!message) {
+        // El mensaje debe pertenecer a la comunidad de la URL; si no, un moderador
+        // de otra comunidad podría borrar mensajes ajenos usando su propio slug
+        if (!message || message.communityId !== community.id) {
             return NextResponse.json({ error: "Mensaje no encontrado" }, { status: 404 });
         }
 

@@ -9,6 +9,21 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          // Las llamadas WebRTC necesitan cámara/micrófono en el propio origen
+          { key: "Permissions-Policy", value: "camera=(self), microphone=(self), geolocation=(self)" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+        ],
+      },
+    ];
+  },
   // Redirect www to non-www (Clerk cookies are set on nearhype.com)
   async redirects() {
     return [

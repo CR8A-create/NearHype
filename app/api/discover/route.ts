@@ -74,7 +74,8 @@ export async function GET() {
             .select({ id: communities.id })
             .from(communities)
             .where(
-                sql`LOWER(${communities.category}) IN (${sql.join(userTopics.map(t => sql.raw(`'${t}'`)), sql`, `)})`
+                // Parametrizado: los intereses son texto libre del usuario, nunca usar sql.raw
+                sql`LOWER(${communities.category}) IN (${sql.join(userTopics.map(t => sql`${t}`), sql`, `)})`
             );
 
         const communityIds = relevantCommunities.map(c => c.id);
