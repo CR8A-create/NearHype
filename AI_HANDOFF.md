@@ -14,7 +14,7 @@ Red social hiperlocal (Next.js 16 App Router + React 19, Clerk, Drizzle + Neon P
 | `npm run build` | ✅ Pasa |
 | `npm run lint` | ✅ 0 errores; 32 warnings (todos `no-img-element`, decisión diferida a Fase 2) |
 | `npx tsc --noEmit` | ✅ Pasa |
-| Tests automatizados | ⚠️ No existen |
+| `npm test` (Vitest) | ✅ 20 tests (lógica pura del feed) |
 
 ## Sesión 2026-07-04 — Resumen
 
@@ -39,7 +39,8 @@ Red social hiperlocal (Next.js 16 App Router + React 19, Clerk, Drizzle + Neon P
    - `app/api/posts/[id]/comments/[commentId]/route.ts` (DELETE): mismo patrón con comentarios (`comment.postId` sin verificar).
    - Además: cabeceras de seguridad básicas en `next.config.ts` (nosniff, Permissions-Policy con cámara/micro para llamadas, Referrer-Policy, X-Frame-Options, HSTS). Verificado también: uploads (auth + límites), DMs y llamadas exigen amistad, roles de comunidad bien escalonados, sin `dangerouslySetInnerHTML`, resto de SQL parametrizado.
 8. **Validación con Zod** en las 6 rutas de contenido: nuevo `lib/validation.ts` con esquemas (`createPostSchema`, `createCommentSchema`, `createMessageSchema`, `createDmSchema`, `createCommunitySchema`, `updatePostSchema`) y helper `parseBody(req, schema)` que devuelve 400 con el primer error legible. Límites alineados con las columnas del schema DB. Patrón a seguir para las rutas restantes (listadas en KNOWN_ISSUES §4).
-9. Ver commits de esta fecha para el detalle de cada cambio.
+9. **Vitest introducido** con los primeros 20 tests. La lógica pura del feed se extrajo de la ruta a `lib/feed/` (`types.ts` con `ContentItem`, `dedupe.ts`, `diversify.ts`) sin cambios de comportamiento; la ruta ahora la importa. Scripts: `npm test` / `npm run test:watch`. Añadir tests aquí al tocar lógica pura.
+10. Ver commits de esta fecha para el detalle de cada cambio.
 
 ## Decisiones de arquitectura vigentes
 

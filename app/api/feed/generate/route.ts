@@ -13,40 +13,9 @@ import { getGamesByInterests } from "@/lib/apis/gaming";
 import { getAIRecommendations, generateFunFacts } from "@/lib/apis/recommendations";
 import { fetchGDELTNews } from "@/lib/apis/gdelt";
 import { fetchLocalEvents } from "@/lib/apis/events";
-
-// ====== ENHANCED CONTENT TYPES ======
-interface ContentItem {
-    id: string;
-    type: 'article' | 'video' | 'music' | 'image' | 'game' | 'fact' | 'recommendation' | 'reddit' | 'community_post' | 'event';
-    title: string;
-    description: string;
-    url: string;
-    embedUrl?: string;
-    thumbnailUrl?: string;
-    source: string;
-    publishedAt: string;
-    relevanceScore: number;
-    category: string;
-    imageUrl?: string;
-    // Enhanced fields
-    mediaType?: 'youtube' | 'spotify' | 'reddit' | 'image' | 'link' | 'game';
-    duration?: string;
-    interactionCount?: number;
-    isRecommendation?: boolean;
-    reason?: string;
-    icon?: string;
-    location?: { city: string; distance: number };
-    subreddit?: string;
-    score?: number;
-    numComments?: number;
-    // Community post fields
-    author?: string;
-    community?: string;
-    communitySlug?: string;
-    // Event fields
-    startDate?: string;
-    eventLocation?: string;
-}
+import type { ContentItem } from "@/lib/feed/types";
+import { deduplicateItems } from "@/lib/feed/dedupe";
+import { diversifyFeed } from "@/lib/feed/diversify";
 
 // Placeholder images by category
 const PLACEHOLDER_IMAGES: Record<string, string[]> = {
@@ -548,144 +517,8 @@ export async function GET() {
     }
 }
 
-// ====== DIVERSIFICATION ALGORITHM ======
-// Ensures the feed feels like TikTok/YouTube — varied, engaging, never boring
-function diversifyFeed(items: ContentItem[]): ContentItem[] {
-    // Group by type
-    const byType: Record<string, ContentItem[]> = {};
-    for (const item of items) {
-        const type = item.type;
-        if (!byType[type]) byType[type] = [];
-        byType[type].push(item);
-    }
-
-    // Sort each group by relevanceScore
-    for (const type of Object.keys(byType)) {
-        byType[type].sort((a, b) => b.relevanceScore - a.relevanceScore);
-    }
-
-    // Build the feed using round-robin with weights
-    // Target distribution: 
-    //   25% articles, 20% community_post, 15% videos, 15% reddit, 7.5% games, 7.5% facts, 10% recommendations
-    const typeWeights: [string, number][] = [
-        ['article', 2.5],
-        ['community_post', 2],
-        ['video', 1.5],
-        ['reddit', 1.5],
-        ['event', 1.5],
-        ['game', 0.75],
-        ['fact', 0.75],
-        ['recommendation', 1],
-    ];
-
-    const result: ContentItem[] = [];
-    const maxItems = 60;
-    let round = 0;
-
-    while (result.length < maxItems && round < 20) {
-        for (const [type, weight] of typeWeights) {
-            const pool = byType[type] || [];
-            const take = Math.ceil(weight);
-            for (let i = 0; i < take && pool.length > 0; i++) {
-                const item = pool.shift();
-                if (item) result.push(item);
-            }
-        }
-        round++;
-    }
-
-    // Insert "Discover something new" cards every 10 items
-    const recommendations = byType['recommendation'] || [];
-    const finalFeed: ContentItem[] = [];
-    let recIndex = 0;
-
-    for (let i = 0; i < result.length; i++) {
-        finalFeed.push(result[i]);
-        // Every 10 items, insert a recommendation if available
-        if ((i + 1) % 10 === 0 && recIndex < recommendations.length) {
-            const rec = recommendations[recIndex];
-            if (rec && !finalFeed.includes(rec)) {
-                finalFeed.push(rec);
-                recIndex++;
-            }
-        }
-    }
-
-    return finalFeed.slice(0, maxItems);
-}
-
 // ====== UTILITIES ======
 function generateCacheKey(userId: string, interests: string[]): string {
     const raw = userId + interests.sort().join(',');
     return crypto.createHash('md5').update(raw).digest('hex');
-}
-
-// ====== ENHANCED DEDUPLICATION ======
-function getDomain(url: string): string {
-    try {
-        return new URL(url).hostname.replace('www.', '');
-    } catch {
-        return '';
-    }
-}
-
-function getSignificantWords(text: string): Set<string> {
-    return new Set(
-        text.toLowerCase()
-            .split(/\s+/)
-            .filter(w => w.length >= 4)
-    );
-}
-
-function getWordSimilarity(title1: string, title2: string): number {
-    const words1 = getSignificantWords(title1);
-    const words2 = getSignificantWords(title2);
-    if (words1.size === 0 && words2.size === 0) return 1;
-    if (words1.size === 0 || words2.size === 0) return 0;
-
-    let shared = 0;
-    for (const w of words1) {
-        if (words2.has(w)) shared++;
-    }
-
-    // Jaccard-style: shared / total unique words
-    const totalUnique = new Set([...words1, ...words2]).size;
-    return totalUnique > 0 ? shared / totalUnique : 0;
-}
-
-function deduplicateItems(items: ContentItem[]): ContentItem[] {
-    const seenUrls = new Set<string>();
-    const seenTitlePrefixes = new Set<string>();
-    const kept: ContentItem[] = [];
-
-    for (const item of items) {
-        // Tier 1: Exact URL match
-        const normalizedUrl = item.url.toLowerCase().replace(/\/+$/, '');
-        if (seenUrls.has(normalizedUrl)) continue;
-
-        // Tier 2: Same domain + word similarity > 70%
-        const domain = getDomain(item.url);
-        let isDomainDupe = false;
-        if (domain) {
-            for (const existing of kept) {
-                if (getDomain(existing.url) === domain) {
-                    if (getWordSimilarity(item.title, existing.title) > 0.7) {
-                        isDomainDupe = true;
-                        break;
-                    }
-                }
-            }
-        }
-        if (isDomainDupe) continue;
-
-        // Tier 3: Title prefix (original 60-char check)
-        const titleKey = item.title.toLowerCase().slice(0, 60);
-        if (seenTitlePrefixes.has(titleKey)) continue;
-
-        seenUrls.add(normalizedUrl);
-        seenTitlePrefixes.add(titleKey);
-        kept.push(item);
-    }
-
-    return kept;
 }
