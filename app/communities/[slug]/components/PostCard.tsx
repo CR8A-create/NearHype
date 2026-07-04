@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChevronUp, ChevronDown, MessageCircle, Loader2, MoreVertical, Edit, Trash } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import { LinkEmbed } from "./LinkEmbeds";
-import { CommentsList } from "./Comments";
+import { CommentsList, type CommentData } from "./Comments";
 import EnhancedCommentInput from "./EnhancedCommentInput";
 
 type Post = {
@@ -290,7 +290,7 @@ export default function PostCard({ post, communitySlug, userRole }: { post: Post
     const [downvotes, setDownvotes] = useState(post.downvotes);
     const [isVoting, setIsVoting] = useState(false);
     const [showComments, setShowComments] = useState(false);
-    const [comments, setComments] = useState<any[]>([]);
+    const [comments, setComments] = useState<CommentData[]>([]);
     const [isLoadingComments, setIsLoadingComments] = useState(false);
     const [commentCount, setCommentCount] = useState(post.commentCount);
     const [isExpanded, setIsExpanded] = useState(false);
@@ -362,7 +362,7 @@ export default function PostCard({ post, communitySlug, userRole }: { post: Post
         setShowComments(!showComments);
     };
 
-    const handleCommentAdded = (newComment: any) => {
+    const handleCommentAdded = (newComment: CommentData) => {
         setComments([...comments, newComment]);
         setCommentCount(commentCount + 1);
     };

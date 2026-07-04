@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { Image, Link2, Smile, Loader2, X } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
+import type { CommentData } from "./Comments";
 
 type EnhancedCommentInputProps = {
     postId: string;
     parentCommentId?: string;
-    onCommentAdded: (comment: any) => void;
+    onCommentAdded: (comment: CommentData) => void;
     placeholder?: string;
 };
 

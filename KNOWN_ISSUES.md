@@ -8,15 +8,8 @@ Problemas conocidos y confirmados. Actualizar al resolver cada uno. Última actu
 
 ## Importantes
 
-1. **`npm run lint` falla con 54 errores.** Desglose:
-   - ~45 × `@typescript-eslint/no-explicit-any` — concentrados en `lib/apis/*` (newsapi, youtube, reddit, gaming, gdelt, google_search, wikipedia, events, free_search), `app/api/feed/generate/route.ts` (10), componentes de comunidades y `lib/db/schema.ts` (2).
-   - 3 errores `react-hooks` que son **bugs potenciales reales**:
-     - `components/CallRoom.tsx:64-65` — `initCall`/`cleanup` usados en `useEffect` antes de declararse; el efecto captura versiones obsoletas.
-     - `components/IncomingCallModal.tsx:51` — mismo patrón.
-     - `components/GlobalHeader.tsx:55` — `setState` síncrono dentro de un efecto (renders en cascada).
-   - 2 × `prefer-const` (auto-corregibles): `app/api/discover/profiles/route.ts:70`, `lib/apis/free_search.ts:76`.
-   - 2 × `react/no-unescaped-entities` en `components/SettingsModal.tsx:206`.
-2. **No hay tests automatizados** de ningún tipo.
+1. **No hay tests automatizados** de ningún tipo.
+2. ~~`npm run lint` falla con 54 errores~~ — **RESUELTO 2026-07-04**: lint en verde (0 errores). Se corrigieron 3 bugs reales de hooks (CallRoom, IncomingCallModal, GlobalHeader), se tipó `lib/apis/*` (nuevo `lib/apis/types.ts` con `ExternalArticle`) y se eliminaron todos los `any`.
 
 ## Menores
 

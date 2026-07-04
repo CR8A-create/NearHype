@@ -101,16 +101,17 @@ export default function ImageUpload({
             } else {
                 throw new Error('No se recibió URL del archivo');
             }
-        } catch (err: any) {
+        } catch (err) {
             console.error('❌ Error en upload:', err);
 
+            const message = err instanceof Error ? err.message : '';
             // Si el error es solo de callback, no es un error real
-            if (err?.message?.includes('callback') || err?.message?.includes('404')) {
+            if (message.includes('callback') || message.includes('404')) {
                 console.warn('⚠️ Error de callback pero el archivo se subió');
                 // Intentar extraer URL del error o del objeto file si está disponible
                 setError('Imagen subida pero con error de callback. Intenta de nuevo.');
             } else {
-                const errorMessage = err?.message || 'Error al subir la imagen';
+                const errorMessage = message || 'Error al subir la imagen';
                 setError(errorMessage);
                 onUploadError?.(errorMessage);
             }

@@ -144,7 +144,7 @@ export default function NotificationBell() {
     // Sonido personalizado único con Web Audio API
     const playNotificationSound = () => {
         try {
-            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
 
             // Frecuencias para un sonido distintivo (acorde mayor con brillo)
             const frequencies = [587.33, 739.99, 987.77]; // D5, F#5, B5

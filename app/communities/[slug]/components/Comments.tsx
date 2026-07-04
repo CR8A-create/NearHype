@@ -5,8 +5,18 @@ import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 
+// Forma de un comentario tal y como lo devuelve /api/posts/[id]/comments
+export interface CommentData {
+    id: string;
+    content: string;
+    createdAt: string;
+    deletedAt?: string | null;
+    author?: { username?: string; avatarUrl?: string | null } | null;
+    replies?: CommentData[];
+}
+
 // Comments List Component
-export function CommentsList({ comments, postId }: { comments: any[]; postId: string }) {
+export function CommentsList({ comments, postId }: { comments: CommentData[]; postId: string }) {
     if (comments.length === 0) {
         return (
             <p className="text-gray-500 text-sm py-4">No hay comentarios aún. ¡Sé el primero!</p>
@@ -23,11 +33,11 @@ export function CommentsList({ comments, postId }: { comments: any[]; postId: st
 }
 
 // Single Comment Component
-export function Comment({ comment, postId, isReply = false }: { comment: any; postId: string; isReply?: boolean }) {
+export function Comment({ comment, postId, isReply = false }: { comment: CommentData; postId: string; isReply?: boolean }) {
     const { user } = useUser();
     const [showReplyForm, setShowReplyForm] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [localReplies, setLocalReplies] = useState<any[]>(comment.replies || []);
+    const [localReplies, setLocalReplies] = useState<CommentData[]>(comment.replies || []);
 
     const formatTime = (timestamp: string) => {
         const date = new Date(timestamp);
@@ -187,7 +197,7 @@ export function Comment({ comment, postId, isReply = false }: { comment: any; po
             {/* Nested Replies */}
             {localReplies.length > 0 && (
                 <div className="mt-3 space-y-3">
-                    {localReplies.map((reply: any) => (
+                    {localReplies.map((reply) => (
                         <Comment key={reply.id} comment={reply} postId={postId} isReply={true} />
                     ))}
                 </div>
@@ -200,7 +210,7 @@ export function Comment({ comment, postId, isReply = false }: { comment: any; po
 export function AddCommentForm({ postId, parentCommentId, onCommentAdded, placeholder = "Escribe un comentario..." }: {
     postId: string;
     parentCommentId?: string;
-    onCommentAdded?: (comment: any) => void;
+    onCommentAdded?: (comment: CommentData) => void;
     placeholder?: string;
 }) {
     const [content, setContent] = useState('');

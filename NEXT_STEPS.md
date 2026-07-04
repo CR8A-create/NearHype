@@ -2,29 +2,26 @@
 
 Siguiente objetivo concreto para quien retome el proyecto. Última actualización: 2026-07-04.
 
-## Objetivo inmediato: lint en verde (54 errores → 0)
+## Estado: lint en verde ✅, build en verde ✅
 
-Orden recomendado (commits pequeños, uno por grupo):
+El objetivo "0 errores de lint" se completó el 2026-07-04. Quedan ~40 **warnings** de lint (no bloqueantes).
 
-1. **Auto-fix**: `npx eslint --fix` corrige los 2 `prefer-const`.
-2. **Bugs reales de hooks** (prioridad — afectan a llamadas y header):
-   - `components/CallRoom.tsx:64` — mover `initCall`/`cleanup` antes del `useEffect` o dentro de él (son bugs de closure obsoleto).
-   - `components/IncomingCallModal.tsx:51` — mismo patrón.
-   - `components/GlobalHeader.tsx:55` — evitar `setState` síncrono en efecto.
-3. **Tipado de `lib/apis/*`**: sustituir `any` por interfaces de respuesta de cada API externa (newsapi, youtube, reddit, gaming, gdelt, google_search, wikipedia, events). Definir tipos junto a cada fetcher.
-4. **Tipado de `app/api/feed/generate/route.ts`** (10 `any`): usa los tipos creados en el paso 3.
-5. **Componentes** (`Comments.tsx`, `PostCard.tsx`, etc.): tipar props y respuestas fetch.
-6. **`lib/db/schema.ts:290,318`**: revisar los 2 `any` (probablemente `$type<...>()` en columnas json).
-7. `components/SettingsModal.tsx:206`: escapar comillas (`&quot;`).
+## Objetivo inmediato: cerrar la Fase 0 del ROADMAP
 
-Tras cada grupo: `npm run lint` + `npm run build`, commit, actualizar KNOWN_ISSUES.md.
+1. **Limpiar warnings de lint** (`npx eslint` sin `--quiet`): imports/variables sin usar, `<img>` → `next/image` (evaluar coste/beneficio en cada caso: `next/image` con dominios externos requiere configurar `remotePatterns` en `next.config.ts`), deps de hooks incompletas.
+2. **Añadir `tsconfig.tsbuildinfo` a `.gitignore`** y sacarlo del repo (`git rm --cached`).
+3. **Verificación manual end-to-end** con `npm run dev`: onboarding, feed, comunidades (posts, comentarios, chat), DMs, llamadas, discover, amigos, notificaciones. Anotar cualquier fallo en KNOWN_ISSUES.md.
 
-## Después
+## Después (Fase 1 — seguridad y tests)
 
-Ver Fase 0 restante en `ROADMAP.md`: warnings, verificación manual con dev server, y luego Fase 1 (seguridad + tests).
+- Auditoría de authz ruta por ruta (¿cada endpoint valida propiedad del recurso?).
+- Validación de inputs con Zod en todas las rutas POST/PATCH.
+- Tests con Vitest para la lógica pura del feed (deduplicación, diversificación).
+- Rate limiting básico con solución gratuita.
 
 ## Contexto que debes conocer antes de tocar nada
 
 - No hay tests: build + lint + prueba manual son la única red de seguridad.
 - Presupuesto 0 €: no añadir servicios de pago.
 - Leer `AI_HANDOFF.md` y `KNOWN_ISSUES.md` primero.
+- Los tipos de las APIs externas viven en cada fetcher de `lib/apis/`; la forma común de artículo es `ExternalArticle` en `lib/apis/types.ts`.

@@ -205,7 +205,7 @@ export async function GET() {
 
         // ====== PROCESS NEWS ======
         if (newsResults.status === 'fulfilled') {
-            for (const item of (newsResults.value as any[])) {
+            for (const item of newsResults.value) {
                 allContent.push({
                     id: crypto.randomUUID(),
                     type: 'article',
@@ -226,7 +226,7 @@ export async function GET() {
 
         // ====== PROCESS YOUTUBE ======
         if (youtubeResults.status === 'fulfilled') {
-            for (const video of (youtubeResults.value as any[])) {
+            for (const video of youtubeResults.value) {
                 allContent.push({
                     id: crypto.randomUUID(),
                     type: 'video',
@@ -250,7 +250,7 @@ export async function GET() {
 
         // ====== PROCESS REDDIT ======
         if (redditResults.status === 'fulfilled') {
-            for (const post of (redditResults.value as any[])) {
+            for (const post of redditResults.value) {
                 allContent.push({
                     id: crypto.randomUUID(),
                     type: 'reddit',
@@ -274,7 +274,7 @@ export async function GET() {
 
         // ====== PROCESS GAMING ======
         if (gamingResults.status === 'fulfilled') {
-            for (const game of (gamingResults.value as any[])) {
+            for (const game of gamingResults.value) {
                 if (!game.name) continue;
                 allContent.push({
                     id: crypto.randomUUID(),
@@ -297,7 +297,7 @@ export async function GET() {
 
         // ====== PROCESS AI RECOMMENDATIONS ======
         if (aiRecommendations.status === 'fulfilled') {
-            for (const rec of (aiRecommendations.value as any[])) {
+            for (const rec of aiRecommendations.value) {
                 allContent.push({
                     id: crypto.randomUUID(),
                     type: 'recommendation',
@@ -318,7 +318,7 @@ export async function GET() {
 
         // ====== PROCESS FUN FACTS ======
         if (funFacts.status === 'fulfilled') {
-            for (const fact of (funFacts.value as any[])) {
+            for (const fact of funFacts.value) {
                 allContent.push({
                     id: crypto.randomUUID(),
                     type: 'fact',
@@ -337,7 +337,7 @@ export async function GET() {
 
         // ====== PROCESS LOCAL NEWS ======
         if (localNews.status === 'fulfilled') {
-            for (const item of (localNews.value as any[])) {
+            for (const item of localNews.value) {
                 allContent.push({
                     id: crypto.randomUUID(),
                     type: 'article',
@@ -359,19 +359,19 @@ export async function GET() {
 
         // ====== PROCESS WIKIPEDIA ======
         if (wikiResults.status === 'fulfilled') {
-            for (const item of (wikiResults.value as any[])) {
+            for (const item of wikiResults.value) {
                 allContent.push({
                     id: crypto.randomUUID(),
                     type: 'article',
                     title: item.title,
-                    description: item.extract || item.description || '',
+                    description: item.description || '',
                     url: item.url,
                     source: 'Wikipedia',
                     publishedAt: new Date().toISOString(),
                     relevanceScore: 50,
                     category: 'knowledge',
                     // wikipedia.ts returns the thumbnail as `socialimage`, not `thumbnail`
-                    imageUrl: item.socialimage || item.thumbnail || undefined,
+                    imageUrl: item.socialimage || undefined,
                     icon: '📖',
                 });
             }
@@ -382,7 +382,7 @@ export async function GET() {
         // description — this is a quirk of the current implementation. We use item.title as
         // the visible description and treat item.description as the image URL.
         if (gdeltResults.status === 'fulfilled') {
-            for (const item of (gdeltResults.value as any[])) {
+            for (const item of gdeltResults.value) {
                 if (!item.title || !item.url) continue;
                 allContent.push({
                     id: crypto.randomUUID(),
@@ -409,7 +409,7 @@ export async function GET() {
 
         // ====== PROCESS LOCAL EVENTS ======
         if (eventsResults.status === 'fulfilled') {
-            for (const event of (eventsResults.value as any[])) {
+            for (const event of eventsResults.value) {
                 if (!event.title || !event.url) continue;
                 allContent.push({
                     id: event.id || crypto.randomUUID(),

@@ -53,8 +53,8 @@ export default function CreateCommunityPage() {
 
             // Redirect to the new community
             router.push(`/communities/${data.community.slug}`);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Error al crear la comunidad');
         } finally {
             setIsCreating(false);
         }

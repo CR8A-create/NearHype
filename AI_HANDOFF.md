@@ -12,15 +12,25 @@ Red social hiperlocal (Next.js 16 App Router + React 19, Clerk, Drizzle + Neon P
 | Verificación | Resultado |
 |---|---|
 | `npm run build` | ✅ Pasa |
-| `npm run lint` | ❌ 54 errores (ver KNOWN_ISSUES.md) |
+| `npm run lint` | ✅ 0 errores (~40 warnings pendientes) |
+| `npx tsc --noEmit` | ✅ Pasa |
 | Tests automatizados | ⚠️ No existen |
-| Working tree | Limpio, sincronizado con `origin/main` |
 
 ## Sesión 2026-07-04 — Resumen
 
 1. **Auditoría inicial**: build ✅, lint ❌ (54 errores).
 2. Creada la infraestructura de continuidad: este archivo, `ROADMAP.md`, `NEXT_STEPS.md`, `KNOWN_ISSUES.md`.
-3. Ver commits de esta fecha para el detalle de cada cambio.
+3. **Corregidos 3 bugs reales de React hooks**:
+   - `CallRoom.tsx`: el `useEffect` de montaje usaba `initCall`/`cleanup` antes de declararse (closures obsoletos) — reordenado.
+   - `IncomingCallModal.tsx`: `stopRingtone` usado antes de declararse — reordenado.
+   - `GlobalHeader.tsx`: el intervalo de polling se reiniciaba con cada cambio de contadores y comparaba con closures obsoletos — ahora usa un ref para los valores previos y depende solo de `user`.
+4. **Eliminados todos los `any`** (54 → 0 errores de lint):
+   - Nuevo `lib/apis/types.ts` con `ExternalArticle` (forma común de NewsAPI/Google Search/Wikipedia).
+   - Tipos crudos de respuesta para GDELT, Reddit, RAWG, Invidious y Eventbrite en sus fetchers.
+   - `schema.ts`: `AnyPgColumn` en FKs auto-referenciadas.
+   - Feed route: eliminados los casts `as any[]` (los fetchers ya están tipados); corregidos dos accesos a campos inexistentes (`item.extract`/`item.thumbnail` → `description`/`socialimage`) en el bloque Wikipedia.
+   - Componentes: nuevo tipo `CommentData` exportado desde `Comments.tsx` y usado en `PostCard`/`EnhancedCommentInput`; `catch (err: any)` → narrowing con `instanceof Error`.
+5. Ver commits de esta fecha para el detalle de cada cambio.
 
 ## Decisiones de arquitectura vigentes
 

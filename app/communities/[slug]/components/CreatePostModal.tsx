@@ -121,8 +121,8 @@ export default function CreatePostModal({
             };
 
             onPostCreated(newPost);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Error al crear el post');
         } finally {
             setIsSubmitting(false);
         }

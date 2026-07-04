@@ -54,7 +54,7 @@ export async function PUT(req: NextRequest) {
         }
 
         // Actualizar solo campos proporcionados
-        const updateData: any = { updatedAt: new Date() };
+        const updateData: Partial<typeof users.$inferInsert> = { updatedAt: new Date() };
 
         if (bio !== undefined) updateData.bio = bio;
         if (bannerUrl !== undefined) updateData.bannerUrl = bannerUrl;
