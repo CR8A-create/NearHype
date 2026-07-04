@@ -61,13 +61,27 @@ async function fetchEventbrite(
 
     const data = await res.json();
 
-    // Undocumented endpoint: events may be under different keys depending on response version
-    const events: any[] = data.events?.results ?? data.events ?? [];
+    // Undocumented endpoint: events may be under different keys depending on response version.
+    // Forma cruda (parcial) de un evento de Eventbrite.
+    type EventbriteRawEvent = {
+        id: string;
+        name?: { text?: string } | string;
+        description?: { text?: string };
+        summary?: string;
+        url?: string;
+        logo?: { url?: string; original?: { url?: string } };
+        primary_venue?: { name?: string };
+        venue?: { name?: string };
+        start?: { local?: string; utc?: string };
+        end?: { local?: string; utc?: string };
+        category?: { name?: string };
+    };
+    const events: EventbriteRawEvent[] = data.events?.results ?? data.events ?? [];
 
-    return events.slice(0, limit).map((e: any) => ({
+    return events.slice(0, limit).map((e) => ({
         id: crypto.randomUUID(),
         externalId: `eventbrite-${e.id}`,
-        title: e.name?.text ?? e.name ?? 'Sin título',
+        title: (typeof e.name === 'string' ? e.name : e.name?.text) ?? 'Sin título',
         description: (e.description?.text ?? e.summary ?? '').slice(0, 300),
         url: e.url ?? `https://www.eventbrite.com/e/${e.id}`,
         imageUrl: e.logo?.url ?? e.logo?.original?.url,

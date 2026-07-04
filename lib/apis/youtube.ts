@@ -1,6 +1,19 @@
 // lib/apis/youtube.ts
 // Fetches YouTube videos related to user interests using the free oEmbed + search approach
 
+// Forma cruda de un resultado de búsqueda del API de Invidious
+interface InvidiousRawVideo {
+    videoId: string;
+    title?: string;
+    description?: string;
+    descriptionHtml?: string;
+    videoThumbnails?: Array<{ url?: string }>;
+    author?: string;
+    published: number;
+    viewCount?: number;
+    lengthSeconds: number;
+}
+
 interface YouTubeVideo {
     id: string;
     title: string;
@@ -37,7 +50,7 @@ export async function searchYouTubeVideos(query: string, maxResults: number = 5)
                 if (!res.ok) continue;
 
                 const data = await res.json();
-                return (data as any[]).slice(0, maxResults).map((item: any) => ({
+                return (data as InvidiousRawVideo[]).slice(0, maxResults).map((item) => ({
                     id: item.videoId,
                     title: item.title || 'Video',
                     description: item.description || item.descriptionHtml?.replace(/<[^>]*>/g, '') || '',

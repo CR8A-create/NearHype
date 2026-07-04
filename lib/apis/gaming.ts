@@ -2,6 +2,20 @@
 // Fetches gaming content from RAWG API (free, 20k requests/month)
 // RAWG API key is free: https://rawg.io/apidocs
 
+// Forma cruda de un juego en la respuesta del API de RAWG
+interface RAWGRawGame {
+    id: number;
+    name: string;
+    slug: string;
+    short_description?: string;
+    background_image?: string;
+    rating?: number;
+    released?: string;
+    genres?: Array<{ name: string }>;
+    platforms?: Array<{ platform?: { name?: string } }>;
+    metacritic: number | null;
+}
+
 interface GameItem {
     id: number;
     name: string;
@@ -39,15 +53,15 @@ export async function searchGames(query: string, maxResults: number = 5): Promis
         }
 
         const data = await res.json();
-        return (data.results || []).map((game: any) => ({
+        return (data.results || []).map((game: RAWGRawGame) => ({
             id: game.id,
             name: game.name,
             description: game.short_description || `${game.name} - Rating: ${game.rating}/5`,
             backgroundImage: game.background_image || '',
             rating: game.rating || 0,
             released: game.released || '',
-            genres: (game.genres || []).map((g: any) => g.name),
-            platforms: (game.platforms || []).map((p: any) => p.platform?.name).filter(Boolean),
+            genres: (game.genres || []).map(g => g.name),
+            platforms: (game.platforms || []).map(p => p.platform?.name).filter((n): n is string => Boolean(n)),
             metacritic: game.metacritic,
             url: `https://rawg.io/games/${game.slug}`,
         }));

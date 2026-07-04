@@ -3,7 +3,7 @@
  * Base de datos optimizada para privacidad (GDPR compliant)
  */
 
-import { pgTable, uuid, varchar, text, timestamp, boolean, real, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, text, timestamp, boolean, real, jsonb, index, uniqueIndex, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 // ====== USERS TABLE ======
@@ -287,7 +287,7 @@ export const postComments = pgTable("post_comments", {
     postId: uuid("post_id").references(() => communityPosts.id, { onDelete: "cascade" }).notNull(),
     userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
     content: text("content").notNull(),
-    parentCommentId: uuid("parent_comment_id").references((): any => postComments.id, { onDelete: "cascade" }),
+    parentCommentId: uuid("parent_comment_id").references((): AnyPgColumn => postComments.id, { onDelete: "cascade" }),
     // Nuevos campos para multimedia
     mediaUrl: text("media_url"), // URLs de fotos/GIFs
     linkUrl: text("link_url"), // Links con preview
@@ -315,7 +315,7 @@ export const communityMessages = pgTable("community_messages", {
     userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
     content: text("content").notNull(),
     // Nuevos campos para respuestas y multimedia
-    replyToId: uuid("reply_to_id").references((): any => communityMessages.id, { onDelete: "set null" }),
+    replyToId: uuid("reply_to_id").references((): AnyPgColumn => communityMessages.id, { onDelete: "set null" }),
     mediaUrl: text("media_url"), // URLs de fotos/GIFs
     linkUrl: text("link_url"), // Links
     createdAt: timestamp("created_at").defaultNow(),

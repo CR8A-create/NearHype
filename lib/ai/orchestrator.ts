@@ -9,7 +9,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export interface OrchestratedQuery {
     source: 'gdelt' | 'reddit' | 'eventbrite';
-    params: Record<string, any>;
+    params: Record<string, unknown>;
     priority: 1 | 2 | 3;
     expected_results: number;
 }

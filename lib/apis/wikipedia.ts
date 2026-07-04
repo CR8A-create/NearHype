@@ -1,15 +1,8 @@
 // lib/apis/wikipedia.ts - Wikipedia API (100% gratis, ilimitado)
 
-interface WikipediaPage {
-    pageid: number;
-    title: string;
-    extract: string;
-    thumbnail?: {
-        source: string;
-    };
-}
+import type { ExternalArticle } from './types';
 
-export async function searchWikipedia(query: string, language: string = 'es', limit: number = 5): Promise<any[]> {
+export async function searchWikipedia(query: string, language: string = 'es'): Promise<ExternalArticle[]> {
     try {
         const url = `https://${language}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`;
 
@@ -44,12 +37,12 @@ export async function searchWikipedia(query: string, language: string = 'es', li
 }
 
 // Buscar artículo de Wikipedia para cada interés
-export async function fetchWikipediaForInterests(interests: string[], language: string = 'es'): Promise<any[]> {
+export async function fetchWikipediaForInterests(interests: string[], language: string = 'es'): Promise<ExternalArticle[]> {
     const results = await Promise.allSettled(
         interests.slice(0, 5).map(interest => searchWikipedia(interest, language))
     );
 
-    const articles: any[] = [];
+    const articles: ExternalArticle[] = [];
     results.forEach(result => {
         if (result.status === 'fulfilled') {
             articles.push(...result.value);

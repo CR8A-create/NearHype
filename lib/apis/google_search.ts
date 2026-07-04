@@ -1,6 +1,8 @@
 // lib/apis/google_search.ts - Google Custom Search API (100 búsquedas/día gratis)
 // PREPARADO PERO DESACTIVADO POR DEFAULT
 
+import type { ExternalArticle } from './types';
+
 const GOOGLE_API_KEY = process.env.GOOGLE_SEARCH_API_KEY || '';
 const GOOGLE_ENGINE_ID = process.env.GOOGLE_SEARCH_ENGINE_ID || '';
 const ENABLE_GOOGLE = process.env.ENABLE_GOOGLE_SEARCH === 'true';
@@ -15,7 +17,7 @@ interface GoogleSearchResult {
     };
 }
 
-export async function searchGoogle(query: string, limit: number = 10): Promise<any[]> {
+export async function searchGoogle(query: string, limit: number = 10): Promise<ExternalArticle[]> {
     if (!ENABLE_GOOGLE || !GOOGLE_API_KEY || !GOOGLE_ENGINE_ID) {
         console.log('Google Search disabled or not configured');
         return [];
@@ -53,7 +55,7 @@ export async function searchGoogle(query: string, limit: number = 10): Promise<a
 }
 
 // Buscar eventos para un interés + ciudad
-export async function searchEvents(interest: string, city: string): Promise<any[]> {
+export async function searchEvents(interest: string, city: string): Promise<ExternalArticle[]> {
     if (!ENABLE_GOOGLE) return [];
 
     const query = `${interest} evento ${city}`;
@@ -61,7 +63,7 @@ export async function searchEvents(interest: string, city: string): Promise<any[
 }
 
 // Buscar torneos/competiciones
-export async function searchTournaments(interest: string, country: string = 'España'): Promise<any[]> {
+export async function searchTournaments(interest: string, country: string = 'España'): Promise<ExternalArticle[]> {
     if (!ENABLE_GOOGLE) return [];
 
     const query = `${interest} torneo competición ${country}`;
@@ -69,7 +71,7 @@ export async function searchTournaments(interest: string, country: string = 'Esp
 }
 
 // Buscar conciertos de bandas/artistas
-export async function searchConcerts(artist: string, city: string): Promise<any[]> {
+export async function searchConcerts(artist: string, city: string): Promise<ExternalArticle[]> {
     if (!ENABLE_GOOGLE) return [];
 
     const query = `${artist} concierto ${city}`;

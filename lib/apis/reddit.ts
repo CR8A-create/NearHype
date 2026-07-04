@@ -1,6 +1,29 @@
 // lib/apis/reddit.ts
 // Fetches popular Reddit posts from subreddits related to user interests (no API key needed)
 
+// Forma cruda de un post en la respuesta JSON pública de Reddit
+interface RedditRawChild {
+    data: {
+        id: string;
+        title: string;
+        selftext?: string;
+        url?: string;
+        url_overridden_by_dest?: string;
+        subreddit: string;
+        author: string;
+        score: number;
+        num_comments: number;
+        thumbnail?: string;
+        preview?: { images?: Array<{ source?: { url?: string } }> };
+        created_utc: number;
+        is_video?: boolean;
+        media?: { reddit_video?: { fallback_url?: string } };
+        permalink: string;
+        stickied?: boolean;
+        over_18?: boolean;
+    };
+}
+
 interface RedditPost {
     id: string;
     title: string;
@@ -69,8 +92,8 @@ export async function fetchSubredditPosts(subreddit: string, limit: number = 5):
         const data = await res.json();
 
         return (data.data?.children || [])
-            .filter((child: any) => !child.data.stickied && !child.data.over_18)
-            .map((child: any) => {
+            .filter((child: RedditRawChild) => !child.data.stickied && !child.data.over_18)
+            .map((child: RedditRawChild) => {
                 const post = child.data;
                 return {
                     id: post.id,

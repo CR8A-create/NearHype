@@ -12,6 +12,16 @@ export interface GDELTArticle {
     location?: string;
 }
 
+// Forma cruda de un artículo en la respuesta del Doc 2.0 API
+interface GDELTRawArticle {
+    title?: string;
+    url: string;
+    domain?: string;
+    seendate?: string;
+    socialimage?: string;
+    location?: string;
+}
+
 export async function fetchGDELTNews(
     keywords: string[],
     language: string = "spanish",
@@ -40,7 +50,7 @@ export async function fetchGDELTNews(
             return [];
         }
 
-        return data.articles.slice(0, maxResults).map((article: any) => ({
+        return data.articles.slice(0, maxResults).map((article: GDELTRawArticle) => ({
             title: article.title || 'Sin título',
             url: article.url,
             source: article.domain || 'Desconocido',

@@ -1,5 +1,7 @@
 // lib/apis/newsapi.ts - NewsAPI.org (100 requests/día gratis para siempre)
 
+import type { ExternalArticle } from './types';
+
 const NEWS_API_KEY = process.env.NEWSAPI_KEY || '';
 const ENABLE_NEWSAPI = process.env.ENABLE_NEWSAPI === 'true';
 
@@ -14,7 +16,7 @@ interface NewsAPIArticle {
     content: string | null;
 }
 
-export async function fetchNewsAPI(query: string, language: string = 'es', pageSize: number = 20): Promise<any[]> {
+export async function fetchNewsAPI(query: string, language: string = 'es', pageSize: number = 20): Promise<ExternalArticle[]> {
     if (!ENABLE_NEWSAPI || !NEWS_API_KEY) {
         console.log('NewsAPI disabled or no API key');
         return [];
@@ -37,7 +39,7 @@ export async function fetchNewsAPI(query: string, language: string = 'es', pageS
             url: article.url,
             source: article.source.name,
             publishedAt: article.publishedAt,
-            socialimage: article.urlToImage,
+            socialimage: article.urlToImage || undefined,
         }));
     } catch (error) {
         console.error('Error fetching NewsAPI:', error);
@@ -46,7 +48,7 @@ export async function fetchNewsAPI(query: string, language: string = 'es', pageS
 }
 
 // Buscar noticias locales (eventos, noticias de una ciudad)
-export async function fetchLocalNews(city: string, interests: string[], limit: number = 10): Promise<any[]> {
+export async function fetchLocalNews(city: string, interests: string[], limit: number = 10): Promise<ExternalArticle[]> {
     if (!ENABLE_NEWSAPI) return [];
 
     const query = `${city} (${interests.slice(0, 3).join(' OR ')})`;
@@ -54,7 +56,7 @@ export async function fetchLocalNews(city: string, interests: string[], limit: n
 }
 
 // Buscar noticias globales por intereses (en Inglés para más volumen, como pidió el usuario)
-export async function fetchInterestNews(interests: string[], limit: number = 20): Promise<any[]> {
+export async function fetchInterestNews(interests: string[], limit: number = 20): Promise<ExternalArticle[]> {
     if (!ENABLE_NEWSAPI) return [];
 
     // Query simple: "gaming OR tech OR music"
