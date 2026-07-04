@@ -8,11 +8,11 @@ Problemas conocidos y confirmados. Actualizar al resolver cada uno. Última actu
 
 ## Importantes
 
-1. **No hay tests automatizados** de ningún tipo.
-2. **Sin rate limiting** en las rutas API (mutaciones, polling de llamadas, generación de feed). Pendiente de Fase 1; usar solución gratuita (contador en memoria por instancia o `@upstash/ratelimit` free tier).
+1. **Cobertura de tests mínima**: solo la lógica pura del feed y el rate limiter (26 tests Vitest). La UI y las rutas API no tienen tests.
+2. ~~Sin rate limiting~~ **RESUELTO 2026-07-04**: middleware con ventana deslizante in-memory (300 lecturas / 60 escrituras por minuto por usuario o IP, 429 con Retry-After). Limitación: estado por instancia serverless; si escala, migrar a almacén compartido (Upstash free tier).
 3. **Sin Content-Security-Policy.** Se añadieron cabeceras básicas (nosniff, Permissions-Policy, Referrer-Policy, X-Frame-Options, HSTS) en `next.config.ts` el 2026-07-04, pero una CSP requiere probar con los scripts inline de Next y los dominios de Clerk/UploadThing antes de activarla.
 4. **Validación de inputs parcial**: las 6 rutas de contenido (posts crear/editar, comentarios, mensajes de comunidad, DMs, crear comunidad) validan con Zod y límites de longitud desde 2026-07-04 (`lib/validation.ts`). Quedan con validación manual: `user/onboarding`, `user/profile`, `user/profile/public`, `user/preferences`, `user/interests/weight`, `friends/request`, `calls` y `communities/[slug]` PATCH — migrarlas al mismo patrón `parseBody(req, schema)`.
-2. ~~`npm run lint` falla con 54 errores~~ — **RESUELTO 2026-07-04**: lint en verde (0 errores). Se corrigieron 3 bugs reales de hooks (CallRoom, IncomingCallModal, GlobalHeader), se tipó `lib/apis/*` (nuevo `lib/apis/types.ts` con `ExternalArticle`) y se eliminaron todos los `any`.
+5. ~~`npm run lint` falla con 54 errores~~ — **RESUELTO 2026-07-04**: lint en verde (0 errores). Se corrigieron 3 bugs reales de hooks (CallRoom, IncomingCallModal, GlobalHeader), se tipó `lib/apis/*` (nuevo `lib/apis/types.ts` con `ExternalArticle`) y se eliminaron todos los `any`.
 
 ## Menores
 

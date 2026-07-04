@@ -1,4 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { NextResponse } from 'next/server';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 
 // Rutas públicas (no requieren autenticación)
@@ -9,9 +11,28 @@ const isPublicRoute = createRouteMatcher([
     '/api/webhook(.*)',
 ]);
 
+const READ_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
 export default clerkMiddleware(async (auth, request) => {
     if (!isPublicRoute(request)) {
         await auth.protect();
+    }
+
+    // Rate limiting básico para la API: por usuario autenticado o, en su
+    // defecto, por IP. Ver lib/rateLimit.ts para límites y limitaciones.
+    if (request.nextUrl.pathname.startsWith('/api')) {
+        const { userId } = await auth();
+        const key = userId
+            ?? request.headers.get('x-forwarded-for')?.split(',')[0].trim()
+            ?? 'anon';
+        const isWrite = !READ_METHODS.has(request.method);
+        const result = checkRateLimit(key, isWrite);
+        if (!result.ok) {
+            return NextResponse.json(
+                { error: 'Demasiadas peticiones. Espera un momento.' },
+                { status: 429, headers: { 'Retry-After': String(result.retryAfterSeconds) } }
+            );
+        }
     }
 });
 
