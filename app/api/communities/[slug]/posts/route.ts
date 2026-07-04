@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { communities, communityPosts, communityMembers, users } from "@/lib/db/schema";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { createPostSchema, parseBody } from "@/lib/validation";
 
 type Params = {
     params: Promise<{ slug: string }>;
@@ -71,23 +72,9 @@ export async function POST(req: NextRequest, { params }: Params) {
             return NextResponse.json({ error: "No autenticado" }, { status: 401 });
         }
 
-        const body = await req.json();
-        const { title, content, contentType, mediaUrl, linkUrl } = body;
-
-        // Validaciones
-        if (!title || title.length < 3) {
-            return NextResponse.json(
-                { error: "El título debe tener al menos 3 caracteres" },
-                { status: 400 }
-            );
-        }
-
-        if (contentType === 'link' && !linkUrl) {
-            return NextResponse.json(
-                { error: "Debes proporcionar una URL para posts de tipo link" },
-                { status: 400 }
-            );
-        }
+        const parsed = await parseBody(req, createPostSchema);
+        if (parsed.error) return parsed.error;
+        const { title, content, contentType, mediaUrl, linkUrl } = parsed.data;
 
         const user = await db.query.users.findFirst({
             where: eq(users.clerkId, clerkId),

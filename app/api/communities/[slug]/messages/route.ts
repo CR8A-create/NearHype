@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { communities, communityMembers, communityMessages, users } from "@/lib/db/schema";
 import { and, desc, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { createMessageSchema, parseBody } from "@/lib/validation";
 
 type Params = {
     params: Promise<{ slug: string }>;
@@ -140,15 +141,9 @@ export async function POST(req: NextRequest, { params }: Params) {
             );
         }
 
-        const body = await req.json();
-        const { content, replyToId, imageUrl } = body;
-
-        if (!content || !content.trim() || content.length > 1000) {
-            return NextResponse.json(
-                { error: "Mensaje inválido (máx 1000 caracteres)" },
-                { status: 400 }
-            );
-        }
+        const parsed = await parseBody(req, createMessageSchema);
+        if (parsed.error) return parsed.error;
+        const { content, replyToId, imageUrl } = parsed.data;
 
         // Extraer primer URL del contenido (si existe)
         const urlRegex = /(https?:\/\/[^\s]+)/g;

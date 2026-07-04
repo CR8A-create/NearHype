@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { communityPosts, users, communities, communityMembers, postVotes } from "@/lib/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { updatePostSchema, parseBody } from "@/lib/validation";
 
 type Params = {
     params: Promise<{ id: string }>;
@@ -188,15 +189,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
             );
         }
 
-        const body = await req.json();
-        const { title, content, mediaUrl, linkUrl } = body;
-
-        if (!title || !title.trim()) {
-            return NextResponse.json(
-                { error: "El título es obligatorio" },
-                { status: 400 }
-            );
-        }
+        const parsed = await parseBody(req, updatePostSchema);
+        if (parsed.error) return parsed.error;
+        const { title, content, mediaUrl, linkUrl } = parsed.data;
 
         // Actualizar post
         await db.update(communityPosts)

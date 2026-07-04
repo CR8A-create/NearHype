@@ -38,7 +38,8 @@ Red social hiperlocal (Next.js 16 App Router + React 19, Clerk, Drizzle + Neon P
    - `app/api/communities/[slug]/messages/[id]/route.ts` (DELETE): un mod de la comunidad A podía borrar mensajes de la B (el mensaje no se verificaba contra el slug). Ahora se comprueba `message.communityId`.
    - `app/api/posts/[id]/comments/[commentId]/route.ts` (DELETE): mismo patrón con comentarios (`comment.postId` sin verificar).
    - Además: cabeceras de seguridad básicas en `next.config.ts` (nosniff, Permissions-Policy con cámara/micro para llamadas, Referrer-Policy, X-Frame-Options, HSTS). Verificado también: uploads (auth + límites), DMs y llamadas exigen amistad, roles de comunidad bien escalonados, sin `dangerouslySetInnerHTML`, resto de SQL parametrizado.
-8. Ver commits de esta fecha para el detalle de cada cambio.
+8. **Validación con Zod** en las 6 rutas de contenido: nuevo `lib/validation.ts` con esquemas (`createPostSchema`, `createCommentSchema`, `createMessageSchema`, `createDmSchema`, `createCommunitySchema`, `updatePostSchema`) y helper `parseBody(req, schema)` que devuelve 400 con el primer error legible. Límites alineados con las columnas del schema DB. Patrón a seguir para las rutas restantes (listadas en KNOWN_ISSUES §4).
+9. Ver commits de esta fecha para el detalle de cada cambio.
 
 ## Decisiones de arquitectura vigentes
 

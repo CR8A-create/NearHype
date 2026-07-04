@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { communities, communityMembers, users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { createCommunitySchema, parseBody } from "@/lib/validation";
 
 // GET /api/communities - Listar todas las comunidades
 export async function GET() {
@@ -41,23 +42,9 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "No autenticado" }, { status: 401 });
         }
 
-        const body = await req.json();
-        const { name, description, category, iconUrl } = body;
-
-        // Validaciones
-        if (!name || name.length < 3) {
-            return NextResponse.json(
-                { error: "El nombre debe tener al menos 3 caracteres" },
-                { status: 400 }
-            );
-        }
-
-        if (!category) {
-            return NextResponse.json(
-                { error: "Debes seleccionar una categoría" },
-                { status: 400 }
-            );
-        }
+        const parsed = await parseBody(req, createCommunitySchema);
+        if (parsed.error) return parsed.error;
+        const { name, description, category, iconUrl } = parsed.data;
 
         // Obtener usuario de la DB
         const user = await db.query.users.findFirst({

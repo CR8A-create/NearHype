@@ -23,7 +23,7 @@ Con `npm run dev` (requiere `.env.local` completo), recorrer y anotar fallos en 
 ## Después (Fase 1 — seguridad y tests)
 
 - ~~Auditoría de authz~~ **HECHA 2026-07-04** (4 vulnerabilidades corregidas, ver AI_HANDOFF.md §7). Los `await auth()` sin comprobar en `communities/[slug]/messages` GET y `users/[username]/similar` son aceptables: el middleware protege todas las rutas API.
-- Validación de inputs con Zod + límites de longitud en todas las rutas POST/PATCH (Zod ya está instalado y sin usar).
+- ~~Validación con Zod en rutas de contenido~~ **HECHA 2026-07-04** (6 rutas; ver lib/validation.ts). Falta migrar las rutas menores listadas en KNOWN_ISSUES §4 al mismo patrón.
 - Tests con Vitest para la lógica pura del feed (deduplicación, diversificación).
 - Rate limiting básico con solución gratuita.
 - CSP: evaluar una Content-Security-Policy compatible con Next inline scripts + Clerk + UploadThing (ver KNOWN_ISSUES.md).

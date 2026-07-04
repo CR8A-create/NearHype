@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { users, dmConversations, dmMessages, friendships, notifications } from "@/lib/db/schema";
 import { eq, or, and, isNull, desc } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { createDmSchema, parseBody } from "@/lib/validation";
 
 type Params = {
     params: Promise<{
@@ -138,11 +139,9 @@ export async function POST(req: NextRequest, { params }: Params) {
         }
 
         const { userId: otherUserId } = await params;
-        const { content, mediaUrl } = await req.json();
-
-        if (!content?.trim()) {
-            return NextResponse.json({ error: "El mensaje no puede estar vacío" }, { status: 400 });
-        }
+        const parsed = await parseBody(req, createDmSchema);
+        if (parsed.error) return parsed.error;
+        const { content, mediaUrl } = parsed.data;
 
         // Verificar que son amigos
         const areFriends = await db.query.friendships.findFirst({
