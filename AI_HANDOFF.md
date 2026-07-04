@@ -41,7 +41,8 @@ Red social hiperlocal (Next.js 16 App Router + React 19, Clerk, Drizzle + Neon P
 8. **Validación con Zod** en las 6 rutas de contenido: nuevo `lib/validation.ts` con esquemas (`createPostSchema`, `createCommentSchema`, `createMessageSchema`, `createDmSchema`, `createCommunitySchema`, `updatePostSchema`) y helper `parseBody(req, schema)` que devuelve 400 con el primer error legible. Límites alineados con las columnas del schema DB. Patrón a seguir para las rutas restantes (listadas en KNOWN_ISSUES §4).
 9. **Vitest introducido** con los primeros 20 tests. La lógica pura del feed se extrajo de la ruta a `lib/feed/` (`types.ts` con `ContentItem`, `dedupe.ts`, `diversify.ts`) sin cambios de comportamiento; la ruta ahora la importa. Scripts: `npm test` / `npm run test:watch`. Añadir tests aquí al tocar lógica pura.
 10. **Rate limiting** en `middleware.ts` + `lib/rateLimit.ts` (ventana deslizante in-memory, testeada): 300 lecturas y 60 escrituras por minuto por usuario (o IP anónima), respuesta 429 con `Retry-After`. Los límites de lectura son generosos a propósito: el polling de señales WebRTC durante una llamada ronda las 75 req/min.
-11. Ver commits de esta fecha para el detalle de cada cambio.
+11. **Dependencias saneadas**: `npm audit fix` (actualizó `@clerk/nextjs` en el lockfile, eliminando las 2 críticas) + upgrade de Next 16.1.3 → **16.2.10** y `eslint-config-next` a juego (cierra 2 avisos altos de DoS). Quedan 15 avisos transitivos sin fix compatible (ver KNOWN_ISSUES). Verificado: tests, lint, tsc y build en verde con Next 16.2.10.
+12. Ver commits de esta fecha para el detalle de cada cambio.
 
 ## Decisiones de arquitectura vigentes
 

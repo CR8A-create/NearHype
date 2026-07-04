@@ -20,7 +20,7 @@ Problemas conocidos y confirmados. Actualizar al resolver cada uno. Última actu
 
 ## Deuda técnica / observaciones
 
-- `npm audit` reporta 33 vulnerabilidades en dependencias transitivas (2 críticas, 17 altas) a 2026-07-04. Revisar con `npm audit` y valorar `npm audit fix` (sin `--force`) en un hito propio con build+tests después.
+- `npm audit`: de 33 vulnerabilidades (2 críticas) se bajó a 15 (0 críticas, 5 altas) el 2026-07-04 vía `npm audit fix` + upgrade de Next a 16.2.10. Las restantes son transitivas sin fix semver-compatible: `serialize-javascript` (vía workbox/next-pwa, solo build-time) y `effect` (vía uploadthing). Riesgo aceptado; revisar cuando next-pwa/uploadthing publiquen versiones nuevas. No usar `npm audit fix --force`.
 - `diversifyFeed` (lib/feed/diversify.ts) descarta silenciosamente los tipos sin peso definido (`music`, `image`). Hoy el generador no produce esos tipos, pero si se añaden nuevas fuentes hay que darles peso en `typeWeights` (comportamiento documentado en el test).
 
 - Señalización WebRTC por polling a la DB: funciona pero es costosa en conexiones; candidata a migrar a SSE ya existente o a un canal dedicado.

@@ -22,6 +22,8 @@ Con `npm run dev` (requiere `.env.local` completo), recorrer y anotar fallos en 
 
 ## Después (Fase 1 — seguridad y tests)
 
+- ~~npm audit~~ **REVISADO 2026-07-04**: 33 → 15 avisos (0 críticos). Restantes documentados en KNOWN_ISSUES como riesgo aceptado.
+
 - ~~Auditoría de authz~~ **HECHA 2026-07-04** (4 vulnerabilidades corregidas, ver AI_HANDOFF.md §7). Los `await auth()` sin comprobar en `communities/[slug]/messages` GET y `users/[username]/similar` son aceptables: el middleware protege todas las rutas API.
 - ~~Validación con Zod en rutas de contenido~~ **HECHA 2026-07-04** (6 rutas; ver lib/validation.ts). Falta migrar las rutas menores listadas en KNOWN_ISSUES §4 al mismo patrón.
 - ~~Tests con Vitest para la lógica del feed~~ **HECHO 2026-07-04** (20 tests en lib/feed/__tests__). Ampliar cobertura al tocar lógica pura.
