@@ -166,7 +166,7 @@ export default function RoleManagementPanel({ communitySlug, currentUserRole, on
                                 >
                                     <div className="flex items-center gap-3 mb-2">
                                         {member.avatarUrl ? (
-                                            <img
+                                            <img loading="lazy" decoding="async"
                                                 src={member.avatarUrl}
                                                 alt={member.username}
                                                 className="w-12 h-12 rounded-full"

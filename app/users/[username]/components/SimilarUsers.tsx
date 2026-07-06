@@ -51,7 +51,7 @@ export default function SimilarUsers({ username }: { username: string }) {
                     >
                         <div className="bg-gray-800 p-3 rounded-lg border border-white/5 group-hover:border-indigo-500/50 transition text-center h-full">
                             {user.avatarUrl ? (
-                                <img
+                                <img loading="lazy" decoding="async"
                                     src={user.avatarUrl}
                                     alt={user.username}
                                     className="w-20 h-20 rounded-full mx-auto mb-3 object-cover"

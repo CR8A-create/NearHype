@@ -206,7 +206,7 @@ export default function DMChat({ otherUser, currentUserId }: DMChatProps) {
             <div className="bg-gray-800 border-b border-white/10 p-4">
                 <div className="flex items-center gap-3">
                     {otherUser.avatarUrl ? (
-                        <img
+                        <img loading="lazy" decoding="async"
                             src={otherUser.avatarUrl}
                             alt={otherUser.username}
                             className="w-10 h-10 rounded-full"
@@ -290,7 +290,7 @@ export default function DMChat({ otherUser, currentUserId }: DMChatProps) {
                                 >
                                     <p className="whitespace-pre-wrap break-words">{message.content}</p>
                                     {message.mediaUrl && (
-                                        <img
+                                        <img loading="lazy" decoding="async"
                                             src={message.mediaUrl}
                                             alt="Media"
                                             className="mt-2 rounded max-w-full"

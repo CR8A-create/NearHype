@@ -110,7 +110,7 @@ export default function ProfileCard({ profile, onSwipe, isTop }: ProfileCardProp
                 {/* Avatar/Banner */}
                 <div className="h-64 bg-gradient-to-br from-indigo-600 to-purple-600 relative overflow-hidden">
                     {profile.avatarUrl ? (
-                        <img
+                        <img loading="lazy" decoding="async"
                             src={profile.avatarUrl}
                             alt={profile.username}
                             className="w-full h-full object-cover"

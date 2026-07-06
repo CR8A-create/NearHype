@@ -238,7 +238,7 @@ export default function CreatePostModal({
                             />
                             {formData.mediaUrl && (
                                 <div className="mt-3 relative">
-                                    <img
+                                    <img loading="lazy" decoding="async"
                                         src={formData.mediaUrl}
                                         alt="Preview"
                                         className="rounded-lg max-h-64 object-cover w-full"

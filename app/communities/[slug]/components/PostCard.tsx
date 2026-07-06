@@ -425,7 +425,7 @@ export default function PostCard({ post, userRole }: { post: Post; communitySlug
                         </div>
                     )}
                     {post.mediaUrl && post.contentType === 'image' && (
-                        <img src={post.mediaUrl} alt="" className="rounded-lg max-h-96 object-cover mb-3" />
+                        <img loading="lazy" decoding="async" src={post.mediaUrl} alt="" className="rounded-lg max-h-96 object-cover mb-3" />
                     )}
 
                     {post.linkUrl && post.contentType === 'link' && (
@@ -435,7 +435,7 @@ export default function PostCard({ post, userRole }: { post: Post; communitySlug
                     <div className="flex items-center gap-4 text-sm text-gray-500">
                         <div className="flex items-center gap-2">
                             {post.author.avatarUrl && (
-                                <img src={post.author.avatarUrl} alt="" className="w-5 h-5 rounded-full" />
+                                <img loading="lazy" decoding="async" src={post.author.avatarUrl} alt="" className="w-5 h-5 rounded-full" />
                             )}
                             <Link href={`/users/${post.author.username}`} className="hover:text-indigo-400 hover:underline transition">
                                 {post.author.username}

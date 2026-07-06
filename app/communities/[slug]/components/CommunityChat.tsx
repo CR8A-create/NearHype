@@ -174,7 +174,7 @@ export default function CommunityChat({ communitySlug }: { communitySlug: string
             <form onSubmit={handleSend} className="border-t border-white/10 p-4">
                 {uploadedImageUrl && (
                     <div className="mb-3 relative inline-block">
-                        <img
+                        <img loading="lazy" decoding="async"
                             src={uploadedImageUrl}
                             alt="Preview"
                             className="max-h-32 rounded-lg"
@@ -279,7 +279,7 @@ function MessageItem({
             onMouseLeave={() => setShowActions(false)}
         >
             {message.author.avatarUrl ? (
-                <img
+                <img loading="lazy" decoding="async"
                     src={message.author.avatarUrl}
                     alt={message.author.username}
                     className="w-10 h-10 rounded-full"
@@ -356,7 +356,7 @@ function MessageItem({
 
                 {/* Image */}
                 {message.mediaUrl && (
-                    <img
+                    <img loading="lazy" decoding="async"
                         src={message.mediaUrl}
                         alt="Imagen del mensaje"
                         className="max-w-sm rounded-lg mb-2"

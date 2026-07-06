@@ -193,7 +193,7 @@ export default function ImageUpload({
             {/* Preview de la imagen */}
             {preview && (
                 <div className="relative mb-3 p-2 bg-white/5 rounded-lg border border-white/20">
-                    <img
+                    <img loading="lazy" decoding="async"
                         src={preview}
                         alt="Preview"
                         className="max-h-40 rounded-lg mx-auto"

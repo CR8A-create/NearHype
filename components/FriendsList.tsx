@@ -142,7 +142,7 @@ export default function FriendsList() {
                             >
                                 <div className="flex items-center gap-3">
                                     {friend.avatarUrl ? (
-                                        <img
+                                        <img loading="lazy" decoding="async"
                                             src={friend.avatarUrl}
                                             alt={friend.username}
                                             className="w-10 h-10 rounded-full"

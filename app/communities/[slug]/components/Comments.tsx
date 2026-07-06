@@ -96,7 +96,7 @@ export function Comment({ comment, postId, isReply = false }: { comment: Comment
         <div className={isReply ? 'ml-8' : ''}>
             <div className="flex items-start gap-3 group relative">
                 {comment.author?.avatarUrl ? (
-                    <img
+                    <img loading="lazy" decoding="async"
                         src={comment.author.avatarUrl}
                         alt={comment.author.username}
                         className="w-8 h-8 rounded-full mt-1"

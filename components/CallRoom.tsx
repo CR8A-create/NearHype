@@ -500,7 +500,7 @@ export default function CallRoom({ roomId }: CallRoomProps) {
                                 <div className="absolute -inset-3 rounded-full bg-indigo-500/20 animate-ping" />
                             )}
                             {otherUser?.avatarUrl ? (
-                                <img
+                                <img loading="lazy" decoding="async"
                                     src={otherUser.avatarUrl}
                                     alt={otherUser.username}
                                     className="relative w-32 h-32 rounded-full border-4 border-white/10 object-cover"

@@ -273,7 +273,7 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
                                     <div className="flex items-center gap-6">
                                         <div className="relative group">
                                             <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-indigo-600/20">
-                                                <img
+                                                <img loading="lazy" decoding="async"
                                                     src={previewAvatar || "/placeholder-avatar.png"}
                                                     alt="Avatar"
                                                     className="w-full h-full object-cover"

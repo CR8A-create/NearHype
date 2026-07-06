@@ -12,7 +12,7 @@ Red social hiperlocal (Next.js 16 App Router + React 19, Clerk, Drizzle + Neon P
 | Verificación | Resultado |
 |---|---|
 | `npm run build` | ✅ Pasa |
-| `npm run lint` | ✅ 0 errores; 32 warnings (todos `no-img-element`, decisión diferida a Fase 2) |
+| `npm run lint` | ✅ 0 errores, 0 warnings |
 | `npx tsc --noEmit` | ✅ Pasa |
 | `npm test` (Vitest) | ✅ 26 tests (lógica del feed + rate limiter) |
 
@@ -53,7 +53,8 @@ Red social hiperlocal (Next.js 16 App Router + React 19, Clerk, Drizzle + Neon P
    - El schema ya estaba bien indexado (índices compuestos correctos en mensajes, amistades, notificaciones, caché).
 16. **Lazy loading**: los modales condicionales se cargan con `next/dynamic` + `ssr: false` — `SettingsModal`/`FriendRequestsModal` en `GlobalHeader` (presente en todas las páginas) y `CreatePostModal`/`EditCommunityModal`/`RoleManagementPanel` en la página de comunidad. Pendiente de comprobar en el e2e manual que los modales abren bien (no testeable en local sin claves dev de Clerk).
 17. **`middleware.ts` renombrado a `proxy.ts`** (misma lógica: Clerk + rate limiting): Next 16.2 marca la convención `middleware` como deprecada. Verificado con dev server: sin warning, home 200, rutas API siguen protegidas (redirect a sign-in sin sesión).
-18. Ver commits de esta fecha para el detalle de cada cambio.
+18. **Decisión de imágenes cerrada (ADR 001, `docs/adr/`)**: `<img loading="lazy" decoding="async">` para contenido de dominios arbitrarios; `next/image` descartado por la cuota de optimización del free tier de Vercel (y el comodín en `remotePatterns` abriría el optimizador como proxy). Regla `no-img-element` desactivada con referencia al ADR. Los 32 `<img>` actualizados. **Lint queda en 0 errores y 0 warnings.**
+19. Ver commits de esta fecha para el detalle de cada cambio.
 
 ## Decisiones de arquitectura vigentes
 

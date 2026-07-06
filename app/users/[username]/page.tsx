@@ -114,7 +114,7 @@ export default function UserProfilePage() {
                     {/* Avatar */}
                     <div className="flex items-end gap-6">
                         {profile.avatarUrl ? (
-                            <img
+                            <img loading="lazy" decoding="async"
                                 src={profile.avatarUrl}
                                 alt={profile.username}
                                 className="w-40 h-40 rounded-full border-4 border-gray-900 shadow-xl"

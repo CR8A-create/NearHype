@@ -139,7 +139,7 @@ export default function MembersPanel({ communitySlug, isCollapsed, onToggle }: M
                             <div className="flex items-center gap-3">
                                 <Link href={`/users/${member.username}`}>
                                     {member.avatarUrl ? (
-                                        <img
+                                        <img loading="lazy" decoding="async"
                                             src={member.avatarUrl}
                                             alt={member.username}
                                             className="w-10 h-10 rounded-full cursor-pointer hover:opacity-80 transition"

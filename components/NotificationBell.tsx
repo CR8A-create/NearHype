@@ -253,7 +253,7 @@ export default function NotificationBell() {
                                         <div className="flex items-start gap-3">
                                             {/* Avatar o icono */}
                                             {notif.metadata?.fromAvatarUrl ? (
-                                                <img
+                                                <img loading="lazy" decoding="async"
                                                     src={notif.metadata.fromAvatarUrl}
                                                     alt={notif.metadata.fromUsername}
                                                     className="w-10 h-10 rounded-full"

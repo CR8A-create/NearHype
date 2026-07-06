@@ -128,7 +128,7 @@ export default function EditCommunityModal({
                         />
                         {formData.iconUrl && (
                             <div className="mt-3">
-                                <img
+                                <img loading="lazy" decoding="async"
                                     src={formData.iconUrl}
                                     alt="Preview"
                                     className="w-20 h-20 rounded-lg object-cover"

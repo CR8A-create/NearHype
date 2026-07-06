@@ -196,7 +196,7 @@ export default function FriendsPage() {
                                         className="flex items-center gap-3 p-4 bg-white/5 rounded-xl border border-white/10 hover:border-indigo-500/40 transition"
                                     >
                                         {friend.avatarUrl ? (
-                                            <img
+                                            <img loading="lazy" decoding="async"
                                                 src={friend.avatarUrl}
                                                 alt={friend.username}
                                                 className="w-12 h-12 rounded-full object-cover flex-shrink-0"
@@ -251,7 +251,7 @@ export default function FriendsPage() {
                                         className="flex items-center gap-3 p-4 bg-white/5 rounded-xl border border-white/10"
                                     >
                                         {req.sender.avatarUrl ? (
-                                            <img
+                                            <img loading="lazy" decoding="async"
                                                 src={req.sender.avatarUrl}
                                                 alt={req.sender.username}
                                                 className="w-12 h-12 rounded-full object-cover flex-shrink-0"
@@ -344,7 +344,7 @@ function SuggestionCard({ profile }: { profile: SuggestedProfile }) {
     return (
         <div className="flex items-center gap-3 p-4 bg-white/5 rounded-xl border border-white/10 hover:border-indigo-500/40 transition">
             {profile.avatarUrl ? (
-                <img
+                <img loading="lazy" decoding="async"
                     src={profile.avatarUrl}
                     alt={profile.username}
                     className="w-12 h-12 rounded-full object-cover flex-shrink-0"

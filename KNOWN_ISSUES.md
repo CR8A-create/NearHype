@@ -18,7 +18,7 @@ Problemas conocidos y confirmados. Actualizar al resolver cada uno. Última actu
 
 - **Login local no funciona** (es el "1 Issue" que muestra el overlay de Next en localhost): `.env.local` tiene claves de producción de Clerk (`pk_live_`/`sk_live_`, restringidas al dominio nearhype.com) y Clerk las rechaza desde localhost. Solución (requiere la cuenta de Clerk del propietario): dashboard.clerk.com → instancia **Development** → API Keys → copiar `pk_test_`/`sk_test_` a `.env.local` y reiniciar el dev server. La verificación e2e manual completa está bloqueada por esto. No es un bug del código.
 
-- 32 warnings `@next/next/no-img-element` (`<img>` en vez de `next/image`). **Decisión pendiente (Fase 2)**: las imágenes del feed vienen de dominios arbitrarios; usar `next/image` requiere `remotePatterns` comodín y puede agotar la cuota de optimización de imágenes del free tier de Vercel. Evaluar `unoptimized`, un loader propio o mantener `<img loading="lazy">`.
+- ~~32 warnings no-img-element~~ **RESUELTO 2026-07-04**: decisión documentada en `docs/adr/001-imagenes-img-vs-next-image.md` — todos los `<img>` llevan `loading="lazy" decoding="async"` y la regla queda desactivada con referencia al ADR. Lint: 0 errores, 0 warnings.
 
 ## Deuda técnica / observaciones
 

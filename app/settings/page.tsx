@@ -170,7 +170,7 @@ export default function SettingsPage() {
                     </h2>
 
                     <div className="flex items-center gap-4 mb-4">
-                        <img
+                        <img loading="lazy" decoding="async"
                             src={user?.imageUrl}
                             alt={user?.firstName || "Usuario"}
                             className="w-20 h-20 rounded-full border-2 border-indigo-500"

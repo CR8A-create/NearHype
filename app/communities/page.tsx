@@ -165,7 +165,7 @@ function CommunityCard({ community }: { community: Community }) {
             {/* Icon */}
             {community.iconUrl ? (
                 <div className="w-16 h-16 rounded-lg overflow-hidden mb-4">
-                    <img src={community.iconUrl} alt={community.name} className="w-full h-full object-cover" />
+                    <img loading="lazy" decoding="async" src={community.iconUrl} alt={community.name} className="w-full h-full object-cover" />
                 </div>
             ) : (
                 <div className="w-16 h-16 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center mb-4">

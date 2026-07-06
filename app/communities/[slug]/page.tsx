@@ -173,7 +173,7 @@ export default function CommunityPage({ params }: { params: Promise<{ slug: stri
                     <div className="flex items-start justify-between flex-wrap gap-4">
                         <div className="flex items-start gap-4">
                             {community.iconUrl ? (
-                                <img src={community.iconUrl} alt={community.name} className="w-20 h-20 rounded-lg" />
+                                <img loading="lazy" decoding="async" src={community.iconUrl} alt={community.name} className="w-20 h-20 rounded-lg" />
                             ) : (
                                 <div className="w-20 h-20 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center">
                                     <Users className="w-10 h-10 text-white" />

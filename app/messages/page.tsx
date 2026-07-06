@@ -186,7 +186,7 @@ function MessagesPage() {
                                 >
                                     <div className="flex items-center gap-3">
                                         {conv.otherUser.avatarUrl ? (
-                                            <img
+                                            <img loading="lazy" decoding="async"
                                                 src={conv.otherUser.avatarUrl}
                                                 alt={conv.otherUser.username}
                                                 className="w-12 h-12 rounded-full"
@@ -235,7 +235,7 @@ function MessagesPage() {
                         </button>
                         <div className="flex items-center gap-2">
                             {selectedConversation.otherUser.avatarUrl ? (
-                                <img src={selectedConversation.otherUser.avatarUrl} alt="" className="w-8 h-8 rounded-full" />
+                                <img loading="lazy" decoding="async" src={selectedConversation.otherUser.avatarUrl} alt="" className="w-8 h-8 rounded-full" />
                             ) : (
                                 <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
                                     {selectedConversation.otherUser.username[0].toUpperCase()}

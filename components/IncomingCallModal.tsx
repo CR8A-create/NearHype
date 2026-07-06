@@ -118,7 +118,7 @@ export default function IncomingCallModal() {
                         <div className="absolute inset-0 rounded-full bg-accent/30 animate-ping" style={{ animationDuration: "1.5s" }} />
                         <div className="absolute -inset-2 rounded-full bg-accent/20 animate-pulse" />
                         {incomingCall.callerAvatar ? (
-                            <img
+                            <img loading="lazy" decoding="async"
                                 src={incomingCall.callerAvatar}
                                 alt={incomingCall.callerUsername}
                                 className="relative w-24 h-24 rounded-full border-4 border-accent"

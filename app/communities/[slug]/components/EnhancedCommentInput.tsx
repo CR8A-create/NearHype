@@ -110,7 +110,7 @@ export default function EnhancedCommentInput({ postId, parentCommentId, onCommen
             {/* Show uploaded image preview */}
             {mediaUrl && !showImageUpload && (
                 <div className="relative">
-                    <img src={mediaUrl} alt="Uploaded" className="max-h-40 rounded-lg" />
+                    <img loading="lazy" decoding="async" src={mediaUrl} alt="Uploaded" className="max-h-40 rounded-lg" />
                     <button
                         type="button"
                         onClick={() => setMediaUrl('')}

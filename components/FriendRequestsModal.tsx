@@ -100,7 +100,7 @@ export default function FriendRequestsModal({ onClose }: { onClose: () => void }
                                 >
                                     <div className="flex items-center gap-3 mb-3">
                                         {request.sender.avatarUrl ? (
-                                            <img
+                                            <img loading="lazy" decoding="async"
                                                 src={request.sender.avatarUrl}
                                                 alt={request.sender.username}
                                                 className="w-12 h-12 rounded-full"
