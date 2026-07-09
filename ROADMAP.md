@@ -8,7 +8,7 @@ Hoja de ruta priorizada de NearHype. Orden absoluto: compilar → ejecutar → e
 - [x] Infraestructura de continuidad (AI_HANDOFF, ROADMAP, NEXT_STEPS, KNOWN_ISSUES) — 2026-07-04
 - [x] Lint en verde: 54 errores corregidos (incl. 3 bugs de hooks: CallRoom, IncomingCallModal, GlobalHeader) — 2026-07-04
 - [x] Limpiar warnings de lint: quedan solo 32 × `no-img-element`, diferidos a Fase 2 — 2026-07-04
-- [ ] Verificación manual end-to-end con dev server (feed, comunidades, DMs, llamadas, discover)
+- [x] Verificación end-to-end del backend — 2026-07-06. Smoke test automatizado (`node scripts/e2e-smoke.mjs`, 32/32 pasos): provisioning, onboarding, feed real (24 items), comunidades (posts/comentarios/votos/chat), authz, amistad, DMs + contadores, señalización de llamadas, notificaciones, validación. Queda el click-through visual de UI (bloqueado por el navegador del preview, no por la app).
 
 ## Fase 1 — Calidad y seguridad
 

@@ -9,7 +9,8 @@ Siguiente objetivo concreto para quien retome el proyecto. Última actualizació
 
 ## Objetivo inmediato: verificación manual end-to-end
 
-> ⚠️ Bloqueada parcialmente: `.env.local` usa claves de producción de Clerk, el login no funciona en localhost (ver KNOWN_ISSUES). Hace falta que el usuario cree una instancia dev de Clerk o pruebe contra producción. El smoke test sin login (landing, arranque, SSR) se hizo el 2026-07-04 y destapó una regresión crítica de Clerk ya corregida.
+> ✅ **Desbloqueada el 2026-07-06**: claves dev de Clerk configuradas. El backend está verificado end-to-end con `scripts/e2e-smoke.mjs` (32/32). **Queda solo el click-through visual de la UI** (el navegador embebido del preview estaba caído; reintentarlo o que el usuario recorra la app logueado en su navegador).
+> Nota: `DATABASE_URL` sigue apuntando a la base de producción de Neon; el usuario creó la branch `dewv` pero falta pegar su connection string (Neon → Connect → desplegable Branch → dewv). El smoke test limpia tras de sí (residuo 0), pero para desarrollo continuado conviene cambiarla.
 
 Con `npm run dev` (requiere `.env.local` completo), recorrer y anotar fallos en KNOWN_ISSUES.md:
 

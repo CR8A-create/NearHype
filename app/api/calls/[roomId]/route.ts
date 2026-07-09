@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { users, callRooms, callSignals, dmConversations, dmMessages } from "@/lib/db/schema";
 import { eq, and, or } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
-import { callActionSchema, parseBody } from "@/lib/validation";
+import { callActionSchema, parseBody, isUuid } from "@/lib/validation";
 
 // Helper: registrar evento de llamada en el chat DM
 async function registerCallMessage(callerId: string, calleeId: string, callType: string, status: string, duration?: number) {
@@ -84,6 +84,7 @@ export async function GET(
         if (!currentUser) return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
 
         const { roomId } = await params;
+        if (!isUuid(roomId)) return NextResponse.json({ error: "Sala no encontrada" }, { status: 404 });
 
         const room = await db.query.callRooms.findFirst({
             where: eq(callRooms.id, roomId),
@@ -139,6 +140,7 @@ export async function POST(
         if (!currentUser) return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
 
         const { roomId } = await params;
+        if (!isUuid(roomId)) return NextResponse.json({ error: "Sala no encontrada" }, { status: 404 });
         const parsed = await parseBody(req, callActionSchema);
         if (parsed.error) return parsed.error;
         const { action, callDuration } = parsed.data;

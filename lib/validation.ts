@@ -154,6 +154,11 @@ export const swipeSchema = z.object({
     action: z.enum(["like", "skip"], { message: "Acción inválida" }),
 });
 
+/** Un parámetro de ruta que no es UUID debe dar 404, no 500 (postgres lanza al comparar). */
+export function isUuid(value: string): boolean {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
 /**
  * Parsea y valida el body JSON de una request.
  * Devuelve `{ data }` si es válido o `{ error }` con una NextResponse 400 lista para retornar.

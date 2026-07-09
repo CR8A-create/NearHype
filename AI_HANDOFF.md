@@ -1,7 +1,7 @@
 # AI_HANDOFF.md
 
 > Documento de traspaso para cualquier IA o desarrollador que continúe NearHype.
-> **Léelo entero antes de tocar código.** Última actualización: 2026-07-04.
+> **Léelo entero antes de tocar código.** Última actualización: 2026-07-06.
 
 ## Qué es NearHype
 
@@ -54,7 +54,9 @@ Red social hiperlocal (Next.js 16 App Router + React 19, Clerk, Drizzle + Neon P
 16. **Lazy loading**: los modales condicionales se cargan con `next/dynamic` + `ssr: false` — `SettingsModal`/`FriendRequestsModal` en `GlobalHeader` (presente en todas las páginas) y `CreatePostModal`/`EditCommunityModal`/`RoleManagementPanel` en la página de comunidad. Pendiente de comprobar en el e2e manual que los modales abren bien (no testeable en local sin claves dev de Clerk).
 17. **`middleware.ts` renombrado a `proxy.ts`** (misma lógica: Clerk + rate limiting): Next 16.2 marca la convención `middleware` como deprecada. Verificado con dev server: sin warning, home 200, rutas API siguen protegidas (redirect a sign-in sin sesión).
 18. **Decisión de imágenes cerrada (ADR 001, `docs/adr/`)**: `<img loading="lazy" decoding="async">` para contenido de dominios arbitrarios; `next/image` descartado por la cuota de optimización del free tier de Vercel (y el comodín en `remotePatterns` abriría el optimizador como proxy). Regla `no-img-element` desactivada con referencia al ADR. Los 32 `<img>` actualizados. **Lint queda en 0 errores y 0 warnings.**
-19. Ver commits de esta fecha para el detalle de cada cambio.
+19. **(2026-07-06) E2E del backend verificado — 32/32 pasos.** El usuario configuró claves dev de Clerk (`pk_test`/`sk_test`) en `.env.local`. Nuevo `scripts/e2e-smoke.mjs`: crea 2 usuarios vía Clerk Backend API, acuña tokens de sesión (Bearer) y recorre TODO el flujo del API contra el dev server: provisioning (`getOrCreateUser`), onboarding+validaciones, generación real de feed, comunidades completas, checks de authz (403 esperados), amistad (accept es **PUT**, no POST), DMs con contador de no-leídos, señalización completa de llamadas (offer→consume→no-reentrega), notificaciones y JSON malformado→400. **Cleanup automático**: borra usuarios (Clerk+DB) y comunidad; residuo 0 filas. Ejecutar con dev server corriendo: `node scripts/e2e-smoke.mjs`.
+20. **Fix descubierto por el e2e**: un `roomId` no-UUID en las rutas de llamadas producía 500 (postgres lanza al comparar uuid inválido). Nuevo helper `isUuid()` en `lib/validation.ts` + guard 404 en `calls/[roomId]` y `calls/[roomId]/signal`. El mismo patrón aplica a otras rutas `[id]` si algún cliente envía ids corruptos (baja prioridad, los clientes propios siempre envían uuids).
+21. Ver commits de esta fecha para el detalle de cada cambio.
 
 ## Decisiones de arquitectura vigentes
 

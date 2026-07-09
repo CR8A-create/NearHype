@@ -5,6 +5,7 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { users, callRooms, callSignals } from "@/lib/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
+import { isUuid } from "@/lib/validation";
 import { NextRequest, NextResponse } from "next/server";
 
 // POST - Enviar señal (SDP offer/answer o ICE candidate)
@@ -20,6 +21,7 @@ export async function POST(
         if (!currentUser) return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
 
         const { roomId } = await params;
+        if (!isUuid(roomId)) return NextResponse.json({ error: "Sala no encontrada" }, { status: 404 });
         const { signalType, signalData } = await req.json();
 
         const room = await db.query.callRooms.findFirst({
@@ -65,6 +67,7 @@ export async function GET(
         if (!currentUser) return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
 
         const { roomId } = await params;
+        if (!isUuid(roomId)) return NextResponse.json({ error: "Sala no encontrada" }, { status: 404 });
 
         // Obtener señales no consumidas para este usuario
         const signals = await db
